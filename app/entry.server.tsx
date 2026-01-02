@@ -5,10 +5,6 @@ import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 import type { AppLoadContext, EntryContext } from "@remix-run/node";
 import { addDocumentResponseHeaders } from "./shopify.server";
-// Rate limiting is handled in middleware
-import { SecurityHeaders, getClientIP } from "./services/security.server";
-import { securityMonitor } from "./services/securityMonitor.server";
-import { logger } from "./utils/logger.server";
 
 const ABORT_DELAY = 5_000;
 
@@ -20,36 +16,6 @@ export default function handleRequest(
   _loadContext: AppLoadContext
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
-  
-  // Apply rate limiting
-  const ip = getClientIP(request);
-  const url = new URL(request.url);
-  const shop = url.searchParams.get('shop') || 'unknown';
-  
-  try {
-    // Rate limiting is handled in middleware, just log for monitoring
-    logger.log('Processing request:', { shop, ip, path: url.pathname });
-  } catch (_error) {
-    // Log any errors but continue processing
-    logger.warn('Error in entry server security check:', { shop, ip });
-  }
-
-  // Add comprehensive security headers
-  Object.entries(SecurityHeaders).forEach(([key, value]) => {
-    responseHeaders.set(key, value);
-  });
-
-  // Log request for monitoring
-  const validation = securityMonitor.validateRequest({
-    headers: Object.fromEntries(request.headers.entries()),
-    url: url.pathname,
-    method: request.method
-  });
-
-  if (!validation.valid) {
-    logger.warn('Security validation issues in entry server:', validation.issues);
-  }
-  // Additional security headers are provided via SecurityHeaders
 
   return isbot(request.headers.get("user-agent") || "")
     ? handleBotRequest(
@@ -103,7 +69,7 @@ function handleBotRequest(
         onError(error: unknown) {
           responseStatusCode = 500;
           if (shellRendered) {
-            logger.error(error);
+            console.error(error);
           }
         },
       }
@@ -150,7 +116,7 @@ function handleBrowserRequest(
         onError(error: unknown) {
           responseStatusCode = 500;
           if (shellRendered) {
-            logger.error(error);
+            console.error(error);
           }
         },
       }

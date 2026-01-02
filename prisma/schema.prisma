@@ -29,10 +29,67 @@ model Session {
   emailVerified Boolean?  @default(false)
 }
 
-// Generic shop settings - extend as needed
+// Shop settings for Decisions
 model Shop {
+  id                  String   @id @default(cuid())
+  shop                String   @unique  // mystore.myshopify.com
+  assumedShippingCost Float    @default(3.50)  // Default £3.50 per order
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// COGS (Cost of Goods Sold) - Product costs
+model COGS {
   id        String   @id @default(cuid())
-  shop      String   @unique  // mystore.myshopify.com
+  shop      String
+  variantId String   // Shopify variant ID (as string)
+  costGbp   Float    // Cost per unit in GBP
+  source    String   // "shopify" | "manual" | "csv"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([shop, variantId])
+  @@index([shop])
+  @@index([shop, source])
+}
+
+// Decision tracking
+model Decision {
+  id          String   @id @default(cuid())
+  shop        String
+  type        String   // "best_seller_loss" | "free_shipping_trap" | "discount_refund_hit"
+  status      String   @default("active") // "active" | "done" | "ignored"
+
+  // Decision content
+  headline    String   // "£X / month at risk" or "£X / month opportunity"
+  actionTitle String   // "Stop pushing Classic Hoodie..."
+  reason      String   // One-line explanation with numbers
+  impact      Float    // £ value (positive)
+  confidence  String   // "high" | "medium" | "low"
+
+  // Supporting data for "See numbers" modal
+  dataJson    Json     // { revenue, cogs, discounts, refunds, shipping, netProfit }
+
+  // Metadata
+  generatedAt DateTime @default(now())
+  completedAt DateTime?
+  ignoredAt   DateTime?
+
+  @@index([shop, status])
+  @@index([shop, generatedAt])
+  @@index([shop, type, status])
+}
+
+// Cache for aggregated Shopify data (avoid re-fetching constantly)
+model DataCache {
+  id        String   @id @default(cuid())
+  shop      String
+  cacheKey  String   // e.g., "orders_last_90_days", "variant_costs"
+  dataJson  Json     // Cached data
+  expiresAt DateTime // 24-hour expiry
+  createdAt DateTime @default(now())
+
+  @@unique([shop, cacheKey])
+  @@index([shop])
+  @@index([expiresAt]) // For cleanup
 }

@@ -3,7 +3,7 @@
 # IMPORTANT: Replace client_id with your actual value from Shopify Partners Dashboard
 client_id = "YOUR_CLIENT_ID_HERE"
 name = "Decisions"
-application_url = "https://decisions-app.vercel.app"
+application_url = "https://decisions-seven.vercel.app"
 embedded = true
 handle = "decisions"
 
@@ -38,9 +38,9 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://decisions-app.vercel.app/auth/callback",
-  "https://decisions-app.vercel.app/auth/shopify/callback",
-  "https://decisions-app.vercel.app/api/auth/callback"
+  "https://decisions-seven.vercel.app/auth/callback",
+  "https://decisions-seven.vercel.app/auth/shopify/callback",
+  "https://decisions-seven.vercel.app/api/auth/callback"
 ]
 
 [pos]

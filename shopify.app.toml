@@ -1,0 +1,47 @@
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration
+
+# Replace these with your actual app credentials
+client_id = "YOUR_CLIENT_ID_HERE"
+name = "your-app-name"
+application_url = "https://your-app.vercel.app"
+embedded = true
+handle = "your-app-handle"
+
+[build]
+automatically_update_urls_on_dev = false
+
+[webhooks]
+api_version = "2025-10"
+
+  # GDPR compliance webhooks (required)
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/data_request"
+  compliance_topics = ["customers/data_request"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/customers/redact"
+  compliance_topics = ["customers/redact"]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/shop/redact"
+  compliance_topics = ["shop/redact"]
+
+  # App lifecycle webhook
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+# Update scopes based on your app needs
+scopes = "read_products"
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://your-app.vercel.app/auth/callback",
+  "https://your-app.vercel.app/auth/shopify/callback",
+  "https://your-app.vercel.app/api/auth/callback"
+]
+
+[pos]
+embedded = false

@@ -1,11 +1,11 @@
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration
 
-# Replace these with your actual app credentials
+# IMPORTANT: Replace client_id with your actual value from Shopify Partners Dashboard
 client_id = "YOUR_CLIENT_ID_HERE"
-name = "your-app-name"
-application_url = "https://your-app.vercel.app"
+name = "Decisions"
+application_url = "https://decisions-app.vercel.app"
 embedded = true
-handle = "your-app-handle"
+handle = "decisions"
 
 [build]
 automatically_update_urls_on_dev = false
@@ -32,15 +32,15 @@ api_version = "2025-10"
   uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
-# Update scopes based on your app needs
-scopes = "read_products"
+# Read-only scopes for Decisions v1 (as per spec)
+scopes = "read_orders,read_products"
 use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://your-app.vercel.app/auth/callback",
-  "https://your-app.vercel.app/auth/shopify/callback",
-  "https://your-app.vercel.app/api/auth/callback"
+  "https://decisions-app.vercel.app/auth/callback",
+  "https://decisions-app.vercel.app/auth/shopify/callback",
+  "https://decisions-app.vercel.app/api/auth/callback"
 ]
 
 [pos]

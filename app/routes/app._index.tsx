@@ -53,6 +53,14 @@ export default function Index() {
 
   const isRefreshing = refreshFetcher.state !== "idle";
 
+  // Automatic refresh when page loads with no decisions
+  useEffect(() => {
+    if (decisions.length === 0 && refreshFetcher.state === "idle" && !refreshFetcher.data) {
+      // Automatically trigger refresh on initial load when no decisions exist
+      refreshFetcher.submit({}, { method: "post", action: "/app/refresh" });
+    }
+  }, [decisions.length, refreshFetcher.state, refreshFetcher.data, refreshFetcher]);
+
   // Reload page after successful refresh
   useEffect(() => {
     if (refreshFetcher.state === "idle" && refreshFetcher.data) {
@@ -60,10 +68,6 @@ export default function Index() {
       window.location.reload();
     }
   }, [refreshFetcher.state, refreshFetcher.data]);
-
-  const handleRefresh = () => {
-    refreshFetcher.submit({}, { method: "post", action: "/app/refresh" });
-  };
 
   const handleMarkDone = (decisionId: string) => {
     decisionFetcher.submit(
@@ -106,25 +110,19 @@ export default function Index() {
   };
 
   return (
-    <Page
-      title="Decisions"
-      primaryAction={{
-        content: isRefreshing ? "Refreshing..." : "Refresh Decisions",
-        onAction: handleRefresh,
-        loading: isRefreshing,
-      }}
-    >
+    <Page title="Decisions">
       <Layout>
         <Layout.Section>
           {decisions.length === 0 ? (
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  No decisions yet
+                  {isRefreshing ? "Analyzing your data..." : "No decisions yet"}
                 </Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  We're analyzing your Shopify data to find profit opportunities.
-                  Click "Refresh Decisions" to generate recommendations.
+                  {isRefreshing
+                    ? "We're analyzing your Shopify orders to find profit opportunities. This may take a moment..."
+                    : "We analyzed your Shopify data but haven't found any profit opportunities yet. Check back later as you get more orders."}
                 </Text>
               </BlockStack>
             </Card>

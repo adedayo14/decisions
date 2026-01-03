@@ -241,6 +241,20 @@ export default function Index() {
 
     return (
       <BlockStack gap="200">
+        {data.salesPaceContext && (
+          <Banner tone="info">
+            <Text as="p" variant="bodySm">
+              {data.salesPaceContext}
+            </Text>
+          </Banner>
+        )}
+        {data.seasonalContext && (
+          <Banner tone="warning">
+            <Text as="p" variant="bodySm">
+              {data.seasonalContext}
+            </Text>
+          </Banner>
+        )}
         <Banner tone={netProfitTone}>
           <Text as="p" variant="bodySm">
             Net profit {netProfit < 0 ? "loss" : "gain"}: {netProfitText}
@@ -251,6 +265,9 @@ export default function Index() {
           headings={["Metric", "Last 90 days"]}
           rows={rows}
         />
+        <Text as="p" variant="bodySm" tone="subdued">
+          Note: Refunds are counted when processed, not when originally ordered. Shipping costs are estimated per order.
+        </Text>
       </BlockStack>
     );
   };

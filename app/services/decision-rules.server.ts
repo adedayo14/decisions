@@ -9,6 +9,7 @@ import {
 } from "./profit-calculator.server";
 import { prisma } from "../db.server";
 import { getShopSettings } from "./shop-settings.server";
+import { getSeasonalContext, calculateRecentSalesPace } from "./seasonality.server";
 
 export interface DecisionData {
   type: "best_seller_loss" | "free_shipping_trap" | "discount_refund_hit";
@@ -17,6 +18,8 @@ export interface DecisionData {
   reason: string;
   impact: number;
   confidence: "high" | "medium" | "low";
+  seasonalContext?: string | null; // v2: "X% worse than usual for this time of year"
+  salesPaceContext?: string | null; // v2: "At your current sales pace (N orders in 30 days)"
   dataJson: {
     revenue: number;
     cogs: number;
@@ -295,6 +298,11 @@ export async function generateDecisions(
     return { created: 0, decisions: [] };
   }
 
+  // v2: Calculate seasonal context and sales pace
+  const seasonalContext = getSeasonalContext(orders);
+  const salesPace30Days = calculateRecentSalesPace(orders, 30);
+  const salesPaceMessage = `At your current sales pace (${salesPace30Days} orders in 30 days)`;
+
   // Run all detection rules with currency symbol
   const [bestSellerLoss, freeShippingTrap, discountRefundHit] = await Promise.all([
     detectBestSellerLoss(shop, orders, currencySymbol),
@@ -307,6 +315,14 @@ export async function generateDecisions(
     freeShippingTrap,
     discountRefundHit,
   ].filter((d): d is DecisionData => d !== null);
+
+  // v2: Add seasonal context and sales pace to all decisions
+  for (const decision of allDecisions) {
+    decision.salesPaceContext = salesPaceMessage;
+    if (seasonalContext.hasEnoughData && seasonalContext.seasonalMessage) {
+      decision.seasonalContext = seasonalContext.seasonalMessage;
+    }
+  }
 
   // Sort by impact (highest first)
   const sortedDecisions = allDecisions.sort((a, b) => b.impact - a.impact);
@@ -327,7 +343,11 @@ export async function generateDecisions(
         reason: decision.reason,
         impact: decision.impact,
         confidence: decision.confidence,
-        dataJson: decision.dataJson,
+        dataJson: {
+          ...decision.dataJson,
+          seasonalContext: decision.seasonalContext || null,
+          salesPaceContext: decision.salesPaceContext || null,
+        },
         runId: decisionRun.id,
         decisionKey: generateDecisionKey(decision),
         completedAt: isTopThree ? null : new Date(),

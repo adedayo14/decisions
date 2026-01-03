@@ -192,6 +192,10 @@ export async function fetchOrdersLast90Days(
 
     const data: any = await response.json();
 
+    if (data.errors && data.errors.length > 0) {
+      throw new Error(data.errors[0]?.message || "Shopify API error");
+    }
+
     if (!data.data?.orders) {
       throw new Error("Failed to fetch orders from Shopify");
     }
@@ -264,6 +268,10 @@ export async function fetchVariantCosts(
     });
 
     const data: any = await response.json();
+
+    if (data.errors && data.errors.length > 0) {
+      throw new Error(data.errors[0]?.message || "Shopify API error");
+    }
 
     if (!data.data?.productVariants) {
       throw new Error("Failed to fetch variant costs from Shopify");

@@ -19,6 +19,20 @@ async function getAccessScopes(admin: Awaited<ReturnType<typeof authenticate.adm
   return scopes.map((scope: { handle: string }) => scope.handle);
 }
 
+function formatUnknownError(error: unknown) {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    if ("message" in error && typeof error.message === "string") {
+      return error.message;
+    }
+    if ("errors" in error && Array.isArray((error as any).errors)) {
+      const first = (error as any).errors[0];
+      if (first?.message) return first.message;
+    }
+  }
+  return "Unexpected error during refresh. Please retry.";
+}
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { admin, session } = await authenticate.admin(request);
@@ -62,7 +76,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Return error as JSON so we can see what failed
     return json(
       {
-        error: error instanceof Error ? error.message : JSON.stringify(error),
+        error: error instanceof Error ? error.message : formatUnknownError(error),
         stack: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }

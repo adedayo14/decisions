@@ -29,10 +29,38 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     },
   });
 
+  const cogsTotals = await prisma.cOGS.aggregate({
+    where: { shop },
+    _count: { _all: true },
+    _max: { updatedAt: true },
+  });
+
+  const cogsBySource = await prisma.cOGS.groupBy({
+    by: ["source"],
+    where: { shop },
+    _count: { _all: true },
+  });
+
+  const bySource = cogsBySource.reduce<Record<string, number>>((acc, row) => {
+    acc[row.source] = row._count._all;
+    return acc;
+  }, {});
+
+  const cogsSummary = {
+    total: cogsTotals._count._all,
+    lastUpdatedAt: cogsTotals._max.updatedAt?.toISOString() ?? null,
+    bySource: {
+      shopify: bySource.shopify ?? 0,
+      csv: bySource.csv ?? 0,
+      manual: bySource.manual ?? 0,
+    },
+  };
+
   return json({
     assumedShippingCost: shopSettings?.assumedShippingCost ?? 3.50,
     currencySymbol: shopSettings?.currencySymbol ?? "£",
     currency: shopSettings?.currency ?? "GBP",
+    cogsSummary,
   });
 };
 
@@ -56,7 +84,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { assumedShippingCost, currencySymbol, currency } = useLoaderData<typeof loader>();
+  const { assumedShippingCost, currencySymbol, currency, cogsSummary } =
+    useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const cogsFetcher = useFetcher();
   const location = useLocation();
@@ -174,6 +203,19 @@ export default function Settings() {
                 <Text as="p" variant="bodyMd" tone="subdued">
                   COGS is managed directly in Shopify. Products without COGS are excluded from profit calculations.
                 </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Synced {cogsSummary.total} costs
+                  {cogsSummary.lastUpdatedAt
+                    ? ` · Last updated ${new Date(cogsSummary.lastUpdatedAt).toLocaleString()}`
+                    : ""}
+                  {cogsSummary.bySource.shopify
+                    ? ` · Shopify ${cogsSummary.bySource.shopify}`
+                    : ""}
+                  {cogsSummary.bySource.csv ? ` · CSV ${cogsSummary.bySource.csv}` : ""}
+                  {cogsSummary.bySource.manual
+                    ? ` · Manual ${cogsSummary.bySource.manual}`
+                    : ""}
+                </Text>
 
                 <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" fontWeight="semibold">
@@ -204,7 +246,7 @@ export default function Settings() {
                   CSV import/export
                 </Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Download current costs or upload a CSV to update them in bulk.
+                  Upload a Shopify product export and we will read Variant SKU + Cost per item automatically.
                 </Text>
 
                 <InlineStack gap="200">
@@ -235,7 +277,7 @@ export default function Settings() {
                       Upload CSV
                     </Button>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Required columns: variantId, costGbp
+                      Required columns: Variant SKU (or Variant ID) and Cost per item
                     </Text>
                   </InlineStack>
                 </BlockStack>

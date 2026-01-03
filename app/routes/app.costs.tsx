@@ -448,7 +448,7 @@ export default function Costs() {
 
                 <Banner tone="info">
                   <Text as="p" variant="bodyMd">
-                    Precedence: Manual overrides > CSV uploads > Shopify costs
+                    Precedence: Manual overrides &gt; CSV uploads &gt; Shopify costs
                   </Text>
                 </Banner>
               </BlockStack>

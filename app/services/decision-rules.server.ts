@@ -13,7 +13,10 @@ import { getSeasonalContext, calculateRecentSalesPace } from "./seasonality.serv
 import {
   buildOutcomeBaselineMetrics,
   calibrateConfidence,
+  computeOutcomeMetrics,
+  filterOrdersByDate,
   getConfidenceHistoryStats,
+  MIN_OUTCOME_ORDERS,
   pickResurfacingCandidate,
 } from "./decision-outcomes.server";
 
@@ -371,6 +374,51 @@ export async function generateDecisions(
         shippingLossPerOrder: 0,
         ordersCount: 0,
       };
+  }
+
+  // v3: "Why now" nudge when recent performance worsened
+  if (orders.length > 0) {
+    const latestOrderDate = new Date(
+      Math.max(...orders.map((order) => new Date(order.createdAt).getTime()))
+    );
+    const recentStart = new Date(latestOrderDate);
+    recentStart.setDate(recentStart.getDate() - 30);
+    const priorStart = new Date(latestOrderDate);
+    priorStart.setDate(priorStart.getDate() - 90);
+
+    const recentOrders = filterOrdersByDate(orders, recentStart, latestOrderDate);
+    const priorOrders = filterOrdersByDate(orders, priorStart, recentStart);
+
+    for (const decision of sortedDecisions) {
+      const recentMetrics = await computeOutcomeMetrics(
+        shop,
+        { type: decision.type, dataJson: decision.dataJson },
+        recentOrders
+      );
+      const priorMetrics = await computeOutcomeMetrics(
+        shop,
+        { type: decision.type, dataJson: decision.dataJson },
+        priorOrders
+      );
+
+      if (
+        !recentMetrics ||
+        !priorMetrics ||
+        recentMetrics.ordersCount < MIN_OUTCOME_ORDERS ||
+        priorMetrics.ordersCount < MIN_OUTCOME_ORDERS
+      ) {
+        continue;
+      }
+
+      const profitWorse = recentMetrics.netProfitPerOrder < priorMetrics.netProfitPerOrder - 0.5;
+      const refundWorse = recentMetrics.refundRate > priorMetrics.refundRate + 2;
+      const shippingWorse =
+        recentMetrics.shippingLossPerOrder > priorMetrics.shippingLossPerOrder + 0.5;
+
+      if (profitWorse || refundWorse || shippingWorse) {
+        decision.dataJson.whyNowMessage = "This got worse in the last 30 days.";
+      }
+    }
   }
 
   // v3: Resurfacing ignored decisions when impact grows materially

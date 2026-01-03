@@ -59,7 +59,7 @@ export function evaluateOutcomeStatus(
   return "no_change";
 }
 
-function filterOrdersByDate(
+export function filterOrdersByDate(
   orders: OrderData[],
   startDate: Date,
   endDate: Date

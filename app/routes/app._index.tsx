@@ -44,6 +44,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let cogsCount = 0;
   let minImpactThreshold = 50;
   let decisionOutcomes: any[] = [];
+  let doneDecisionsCount = 0;
+  let improvedDecisionsCount = 0;
 
   try {
     // Build filter conditions
@@ -108,6 +110,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         },
       });
     }
+
+    doneDecisionsCount = await prisma.decision.count({
+      where: { shop, status: "done" },
+    });
+
+    const decisionIds = await prisma.decision.findMany({
+      where: { shop },
+      select: { id: true },
+    });
+    const decisionIdList = decisionIds.map((row) => row.id);
+
+    if (decisionIdList.length > 0) {
+      improvedDecisionsCount = await prisma.decisionOutcome.count({
+        where: {
+          decisionId: { in: decisionIdList },
+          outcomeStatus: "improved",
+        },
+      });
+    }
   } catch (error) {
     console.error("[app._index loader] Error loading decisions (non-fatal):", error);
     // Continue with empty decisions - user can try "Refresh" button
@@ -127,6 +148,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     minOrdersRequired: MIN_ORDERS_FOR_DECISIONS,
     minImpactThreshold,
     currencySymbol,
+    doneDecisionsCount,
+    improvedDecisionsCount,
     filters: {
       status: statusFilter,
       type: typeFilter,
@@ -167,22 +190,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const baseline = outcome.baselineMetrics as any;
         const post = outcome.postMetrics as any;
         const delta = (post.netProfitPerOrder ?? 0) - (baseline.netProfitPerOrder ?? 0);
+        const baselineValue = baseline.netProfitPerOrder ?? 0;
+        const postValue = post.netProfitPerOrder ?? 0;
+        const formatSigned = (value: number) => {
+          const formatted = `${currencySymbol}${Math.abs(value).toFixed(2)}`;
+          return value < 0 ? `-${formatted}` : formatted;
+        };
+        const storyLine = `Profit/order: ${formatSigned(baselineValue)} → ${formatSigned(postValue)}`;
         const deltaText = `${currencySymbol}${Math.abs(delta).toFixed(2)}`;
 
         if (outcome.outcomeStatus === "improved") {
           return {
             status: "improved",
+            storyLine,
             message: `After you acted, net profit per order improved by ${deltaText} over ${windowDays} days.`,
           };
         }
         if (outcome.outcomeStatus === "worsened") {
           return {
             status: "worsened",
+            storyLine,
             message: `After you acted, net profit per order fell by ${deltaText} over ${windowDays} days.`,
           };
         }
         return {
           status: "no_change",
+          storyLine,
           message: `No clear change in net profit per order over ${windowDays} days.`,
         };
       })(),
@@ -199,6 +232,8 @@ export default function Index() {
     minOrdersRequired,
     minImpactThreshold,
     currencySymbol,
+    doneDecisionsCount,
+    improvedDecisionsCount,
     filters,
   } =
     useLoaderData<typeof loader>();
@@ -230,6 +265,16 @@ export default function Index() {
       return next;
     });
   };
+
+  useEffect(() => {
+    if (decisions.length === 0) return;
+    if (typeof window === "undefined") return;
+    const autoOpenKey = "decisionsNumbersAutoOpen_v3";
+    const hasOpened = window.localStorage.getItem(autoOpenKey);
+    if (hasOpened) return;
+    setExpandedDecisions(new Set([decisions[0].id]));
+    window.localStorage.setItem(autoOpenKey, "true");
+  }, [decisions]);
 
   // Automatic refresh when page loads with no prior analysis
   useEffect(() => {
@@ -374,6 +419,13 @@ export default function Index() {
               </Text>
             </Banner>
           )}
+          {doneDecisionsCount > 0 && (
+            <Banner tone="info">
+              <Text as="p" variant="bodyMd">
+                You acted on {doneDecisionsCount} decisions, {improvedDecisionsCount} improved.
+              </Text>
+            </Banner>
+          )}
           {showCogsWarning && (
             <Banner tone="warning">
               <Text as="p" variant="bodyMd">
@@ -504,6 +556,11 @@ export default function Index() {
                       to unlock profit-based decisions.
                     </Text>
                   )}
+                  {!isRefreshing && (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      Showing only decisions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month (change in Settings).
+                    </Text>
+                  )}
                   {orderCount > 0 && !isRefreshing && (
                     <Text as="p" variant="bodySm" tone="subdued">
                       For best results, we recommend having 100+ orders. Check back as you get more
@@ -549,6 +606,11 @@ export default function Index() {
                         <Text as="p" variant="bodyMd" tone="subdued">
                           {decision.reason}
                         </Text>
+                        {decision.dataJson?.whyNowMessage && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {decision.dataJson.whyNowMessage}
+                          </Text>
+                        )}
                         {decision.dataJson?.runRateContext && (
                           <Text as="p" variant="bodySm" tone="subdued">
                             {decision.dataJson.runRateContext}
@@ -565,6 +627,11 @@ export default function Index() {
                               Decisions like this have improved outcomes ~{Math.round(decision.dataJson.confidenceHistoryRate * 100)}% of the time for your store.
                             </Text>
                           )}
+                        {decision.outcome?.storyLine && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {decision.outcome.storyLine}
+                          </Text>
+                        )}
                         {decision.outcome?.message && (
                           <Text as="p" variant="bodySm" tone="subdued">
                             {decision.outcome.message}

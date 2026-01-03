@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, useLocation } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -12,11 +12,14 @@ import {
   Banner,
   Collapsible,
   DataTable,
+  EmptyState,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { getActiveDecisions } from "../services/decision-rules.server";
 import { prisma } from "../db.server";
 import { useEffect, useState } from "react";
+
+const MIN_ORDERS_FOR_DECISIONS = 30;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -29,6 +32,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let orderCount = 0;
   let lastAnalyzedAt: string | null = null;
   let currencySymbol = "£"; // Default fallback
+  let cogsCount = 0;
 
   try {
     decisions = await getActiveDecisions(shop);
@@ -43,6 +47,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     orderCount = shopData?.lastOrderCount ?? 0;
     lastAnalyzedAt = shopData?.lastAnalyzedAt?.toISOString() ?? null;
     currencySymbol = shopData?.currencySymbol ?? "£";
+
+    cogsCount = await prisma.cOGS.count({ where: { shop } });
   } catch (error) {
     console.error("[app._index loader] Error loading decisions (non-fatal):", error);
     // Continue with empty decisions - user can try "Refresh" button
@@ -52,6 +58,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop,
     orderCount,
     lastAnalyzedAt,
+    cogsCount,
+    minOrdersRequired: MIN_ORDERS_FOR_DECISIONS,
     currencySymbol,
     decisions: decisions.map((d) => ({
       id: d.id,
@@ -68,12 +76,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Index() {
-  const { decisions, orderCount, currencySymbol } = useLoaderData<typeof loader>();
+  const { decisions, orderCount, lastAnalyzedAt, cogsCount, minOrdersRequired, currencySymbol } =
+    useLoaderData<typeof loader>();
   const refreshFetcher = useFetcher();
   const decisionFetcher = useFetcher();
+  const location = useLocation();
   const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
 
   const isRefreshing = refreshFetcher.state !== "idle";
+  const refreshError =
+    refreshFetcher.data && "error" in refreshFetcher.data ? refreshFetcher.data.error : null;
+  const search = location.search;
+  const refreshAction = `/app/refresh${search}`;
+  const settingsUrl = `/app/settings${search}`;
+  const shouldAutoRefresh = decisions.length === 0 && !lastAnalyzedAt;
+  const showCogsWarning = !isRefreshing && cogsCount === 0 && decisions.length > 0;
 
   const toggleNumbers = (decisionId: string) => {
     setExpandedDecisions((prev) => {
@@ -87,21 +104,21 @@ export default function Index() {
     });
   };
 
-  // Automatic refresh when page loads with no decisions
+  // Automatic refresh when page loads with no prior analysis
   useEffect(() => {
-    if (decisions.length === 0 && refreshFetcher.state === "idle" && !refreshFetcher.data) {
-      // Automatically trigger refresh on initial load when no decisions exist
-      refreshFetcher.submit({}, { method: "post", action: "/app/refresh" });
+    if (shouldAutoRefresh && refreshFetcher.state === "idle" && !refreshFetcher.data) {
+      // Automatically trigger refresh on initial load when no analysis exists
+      refreshFetcher.submit({}, { method: "post", action: refreshAction });
     }
-  }, [decisions.length, refreshFetcher.state, refreshFetcher.data, refreshFetcher]);
+  }, [shouldAutoRefresh, refreshFetcher.state, refreshFetcher.data, refreshFetcher, refreshAction]);
 
   // Reload page after successful refresh
   useEffect(() => {
-    if (refreshFetcher.state === "idle" && refreshFetcher.data) {
+    if (refreshFetcher.state === "idle" && refreshFetcher.data && !refreshError) {
       // Refresh completed, reload decisions
-      window.location.reload();
+      window.location.assign(`${location.pathname}${location.search}`);
     }
-  }, [refreshFetcher.state, refreshFetcher.data]);
+  }, [refreshFetcher.state, refreshFetcher.data, refreshError, location.pathname, location.search]);
 
   const handleMarkDone = (decisionId: string) => {
     decisionFetcher.submit(
@@ -171,34 +188,83 @@ export default function Index() {
   return (
     <Page
       title="Decisions"
+      primaryAction={{
+        content: isRefreshing ? "Analyzing..." : "Refresh analysis",
+        onAction: () => refreshFetcher.submit({}, { method: "post", action: refreshAction }),
+        loading: isRefreshing,
+      }}
       secondaryActions={[
         {
           content: "Settings",
-          url: "/app/settings",
+          url: settingsUrl,
         },
       ]}
     >
       <Layout>
         <Layout.Section>
+          {refreshError && (
+            <Banner tone="critical">
+              <Text as="p" variant="bodyMd">
+                Refresh failed: {refreshError}
+              </Text>
+            </Banner>
+          )}
+          {showCogsWarning && (
+            <Banner tone="warning">
+              <Text as="p" variant="bodyMd">
+                No product costs found. Add costs in Shopify or upload a CSV to unlock profit-based
+                decisions.
+              </Text>
+            </Banner>
+          )}
           {decisions.length === 0 ? (
             <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  {isRefreshing ? "Analyzing your data..." : "No decisions yet"}
-                </Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  {isRefreshing
-                    ? "We're analyzing your Shopify orders to find profit opportunities. This may take a moment..."
-                    : orderCount > 0
-                    ? `We analyzed ${orderCount} orders from the last 90 days but haven't found any profit opportunities yet. This is good - your margins look healthy!`
-                    : "We haven't analyzed your data yet. We'll automatically check your orders when you first load the app."}
-                </Text>
-                {orderCount > 0 && !isRefreshing && (
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    For best results, we recommend having 100+ orders. Check back as you get more sales.
+              <EmptyState
+                heading={isRefreshing ? "Analyzing your data..." : "No decisions yet"}
+                action={{
+                  content: "Refresh analysis",
+                  onAction: () => refreshFetcher.submit({}, { method: "post", action: refreshAction }),
+                  loading: isRefreshing,
+                }}
+                secondaryAction={{
+                  content: "Update settings",
+                  url: settingsUrl,
+                }}
+              >
+                <BlockStack gap="300">
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    {isRefreshing
+                      ? "We're analyzing your Shopify orders to find profit opportunities. This may take a moment..."
+                      : lastAnalyzedAt
+                      ? `We analyzed ${orderCount} orders from the last 90 days but haven't found any profit opportunities yet.`
+                      : "We haven't analyzed your data yet. We'll automatically check your orders when you first load the app."}
                   </Text>
-                )}
-              </BlockStack>
+                  {!isRefreshing && orderCount > 0 && orderCount < minOrdersRequired && (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      Not enough evidence yet. We need at least {minOrdersRequired} orders to spot
+                      reliable patterns.
+                    </Text>
+                  )}
+                  {!isRefreshing && orderCount >= minOrdersRequired && (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      This is good news - your margins look healthy. We'll surface new opportunities
+                      as your data grows.
+                    </Text>
+                  )}
+                  {!isRefreshing && cogsCount === 0 && (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      We couldn't find any product costs yet. Add costs in Shopify or upload a CSV
+                      to unlock profit-based decisions.
+                    </Text>
+                  )}
+                  {orderCount > 0 && !isRefreshing && (
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      For best results, we recommend having 100+ orders. Check back as you get more
+                      sales.
+                    </Text>
+                  )}
+                </BlockStack>
+              </EmptyState>
             </Card>
           ) : (
             <BlockStack gap="400">

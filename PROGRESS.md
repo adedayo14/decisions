@@ -92,6 +92,12 @@
 - "Refresh Decisions" triggers data ingestion
 - Decision generation logic implemented
 
+### TODO (Verification) ⏳
+- [ ] Run seeded data acceptance tests (A-E) in test store
+- [ ] Confirm refund parsing and discount detection with real orders
+- [ ] Verify "See numbers" breakdown matches seeded scenarios
+- [ ] Validate settings persistence changes decision impact
+
 ### Known Issue ⚠️
 **Scope Permissions on Install Screen**
 - **Expected:** Only "View orders" and "View products"

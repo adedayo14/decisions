@@ -28,6 +28,9 @@ export interface DecisionData {
   };
 }
 
+const MIN_ORDERS_FOR_DECISIONS = 30;
+const MIN_BEST_SELLER_UNITS = 10;
+
 /**
  * Format currency with shop's currency symbol
  */
@@ -62,6 +65,10 @@ export async function detectBestSellerLoss(
     const bScore = b.unitsSold * Math.abs(b.netProfit);
     return bScore - aScore;
   })[0];
+
+  if (worst.unitsSold < MIN_BEST_SELLER_UNITS) {
+    return null;
+  }
 
   const monthlyLoss = Math.abs(worst.netProfit) * (30 / 90); // Project to monthly
   const productName = worst.productName.split(" - ")[0]; // Remove variant suffix
@@ -143,7 +150,8 @@ export async function detectFreeShippingTrap(
     (v) => v < bestThreshold && v >= bestThreshold - 5
   );
   const avgGap = bestThreshold - nearMissOrders.reduce((a, b) => a + b, 0) / nearMissOrders.length;
-  const monthlySavings = (bestClusterCount * assumedShippingCost * 30) / 90;
+  const periodSavings = bestClusterCount * assumedShippingCost;
+  const monthlySavings = (periodSavings * 30) / 90;
 
   return {
     type: "free_shipping_trap",
@@ -157,8 +165,8 @@ export async function detectFreeShippingTrap(
       cogs: 0,
       discounts: 0,
       refunds: 0,
-      shipping: bestClusterCount * assumedShippingCost,
-      netProfit: monthlySavings,
+      shipping: periodSavings,
+      netProfit: periodSavings,
       currentThreshold: bestThreshold,
       suggestedThreshold: bestThreshold - 5,
       nearMissCount: bestClusterCount,
@@ -257,6 +265,10 @@ export async function generateDecisions(
       completedAt: new Date(),
     },
   });
+
+  if (orders.length < MIN_ORDERS_FOR_DECISIONS) {
+    return { created: 0, decisions: [] };
+  }
 
   // Run all detection rules with currency symbol
   const [bestSellerLoss, freeShippingTrap, discountRefundHit] = await Promise.all([

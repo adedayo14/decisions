@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs, redirect, json } from "@remix-run/node";
+import { type ActionFunctionArgs, json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { ingestShopifyData, getOrderData } from "../services/data-ingestion.server";
 import { generateDecisions } from "../services/decision-rules.server";
@@ -26,7 +26,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await generateDecisions(shop, orders);
     console.log("[app.refresh] Decisions generated");
 
-    return redirect("/app");
+    return json({ success: true, ordersCount: orders.length });
   } catch (error) {
     console.error("[app.refresh] Error during refresh:", error);
 

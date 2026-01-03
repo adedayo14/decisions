@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, useLocation } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -9,10 +9,12 @@ import {
   TextField,
   Button,
   Banner,
+  DropZone,
+  InlineStack,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { prisma } from "../db.server";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -56,11 +58,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function Settings() {
   const { assumedShippingCost, currencySymbol, currency } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
+  const cogsFetcher = useFetcher();
+  const location = useLocation();
 
   const [shippingCost, setShippingCost] = useState(assumedShippingCost.toString());
   const [showSuccess, setShowSuccess] = useState(false);
+  const [cogsFile, setCogsFile] = useState<File | null>(null);
 
   const isSaving = fetcher.state !== "idle";
+  const isUploadingCogs = cogsFetcher.state !== "idle";
+  const search = location.search;
+  const cogsAction = `/app/cogs${search}`;
 
   useEffect(() => {
     if (fetcher.state === "idle" && fetcher.data && "success" in fetcher.data) {
@@ -68,6 +76,17 @@ export default function Settings() {
       setTimeout(() => setShowSuccess(false), 3000);
     }
   }, [fetcher.state, fetcher.data]);
+
+  const handleCogsDrop = useCallback((_dropFiles: File[], acceptedFiles: File[]) => {
+    setCogsFile(acceptedFiles[0] ?? null);
+  }, []);
+
+  const handleCogsUpload = () => {
+    if (!cogsFile) return;
+    const formData = new FormData();
+    formData.append("cogsFile", cogsFile);
+    cogsFetcher.submit(formData, { method: "post", encType: "multipart/form-data", action: cogsAction });
+  };
 
   const handleSave = () => {
     fetcher.submit(
@@ -79,7 +98,7 @@ export default function Settings() {
   return (
     <Page
       title="Settings"
-      backAction={{ url: "/app" }}
+      backAction={{ url: `/app${search}` }}
     >
       <Layout>
         <Layout.Section>
@@ -154,6 +173,68 @@ export default function Settings() {
                     After adding costs, return to Decisions and the app will automatically include those products in profit analysis.
                   </Text>
                 </BlockStack>
+              </BlockStack>
+            </Card>
+
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  CSV import/export
+                </Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Download current costs or upload a CSV to update them in bulk.
+                </Text>
+
+                <InlineStack gap="200">
+                  <Button url={cogsAction} variant="secondary">
+                    Download COGS CSV
+                  </Button>
+                </InlineStack>
+
+                <BlockStack gap="200">
+                  <DropZone accept=".csv" onDrop={handleCogsDrop}>
+                    {cogsFile ? (
+                      <Text as="p" variant="bodyMd">
+                        Selected: {cogsFile.name}
+                      </Text>
+                    ) : (
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        Drag and drop a CSV file here, or click to select.
+                      </Text>
+                    )}
+                  </DropZone>
+                  <InlineStack gap="200">
+                    <Button
+                      variant="primary"
+                      onClick={handleCogsUpload}
+                      disabled={!cogsFile}
+                      loading={isUploadingCogs}
+                    >
+                      Upload CSV
+                    </Button>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Required columns: variantId, costGbp
+                    </Text>
+                  </InlineStack>
+                </BlockStack>
+
+                {cogsFetcher.data && "error" in cogsFetcher.data && (
+                  <Banner tone="critical">
+                    <Text as="p" variant="bodyMd">
+                      {cogsFetcher.data.error}
+                    </Text>
+                  </Banner>
+                )}
+                {cogsFetcher.data && "success" in cogsFetcher.data && (
+                  <Banner tone="success">
+                    <Text as="p" variant="bodyMd">
+                      Imported {cogsFetcher.data.imported} costs.
+                      {cogsFetcher.data.errors?.length
+                        ? ` ${cogsFetcher.data.errors.length} rows had issues.`
+                        : ""}
+                    </Text>
+                  </Banner>
+                )}
               </BlockStack>
             </Card>
           </BlockStack>

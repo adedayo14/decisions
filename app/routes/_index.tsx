@@ -9,7 +9,7 @@ export const meta: MetaFunction = () => [
   {
     name: "description",
     content:
-      "Turn Shopify order data into 1-3 focused profit decisions with clear impact and transparent numbers.",
+      "Decisions shows you fewer, better profit decisions — and proves whether they worked.",
   },
 ];
 
@@ -41,8 +41,8 @@ export default function Index() {
             <p className="hero__eyebrow">Profit signals for Shopify stores</p>
             <h1>Decisions that protect your margins.</h1>
             <p className="hero__lead">
-              We analyze the last 90 days of orders and return 1-3 specific actions with pound
-              impact, confidence, and the exact numbers behind each call.
+              Most apps show you more data. Decisions shows you fewer, better decisions — and
+              proves whether they worked.
             </p>
             <div className="hero__cta">
               <a className="button button--primary" href={appUrl}>

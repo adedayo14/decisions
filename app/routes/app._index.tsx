@@ -197,26 +197,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           return value < 0 ? `-${formatted}` : formatted;
         };
         const storyLine = `Profit/order: ${formatSigned(baselineValue)} → ${formatSigned(postValue)}`;
-        const deltaText = `${currencySymbol}${Math.abs(delta).toFixed(2)}`;
+        const deltaSigned = `${delta < 0 ? "-" : ""}${currencySymbol}${Math.abs(delta).toFixed(2)}`;
+        const outcomeLine = `After you acted, net profit per order changed by ${deltaSigned} over ${windowDays} days.`;
 
         if (outcome.outcomeStatus === "improved") {
           return {
             status: "improved",
             storyLine,
-            message: `After you acted, net profit per order improved by ${deltaText} over ${windowDays} days.`,
+            message: outcomeLine,
           };
         }
         if (outcome.outcomeStatus === "worsened") {
           return {
             status: "worsened",
             storyLine,
-            message: `After you acted, net profit per order fell by ${deltaText} over ${windowDays} days.`,
+            message: outcomeLine,
           };
         }
         return {
           status: "no_change",
           storyLine,
-          message: `No clear change in net profit per order over ${windowDays} days.`,
+          message: outcomeLine,
         };
       })(),
     })),
@@ -243,6 +244,7 @@ export default function Index() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [showFirstRunNote, setShowFirstRunNote] = useState(false);
 
   const isRefreshing = refreshFetcher.state !== "idle";
   const refreshError =
@@ -275,6 +277,15 @@ export default function Index() {
     setExpandedDecisions(new Set([decisions[0].id]));
     window.localStorage.setItem(autoOpenKey, "true");
   }, [decisions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const firstRunKey = "decisionsFirstRunNote_v3";
+    const seen = window.localStorage.getItem(firstRunKey);
+    if (seen) return;
+    setShowFirstRunNote(true);
+    window.localStorage.setItem(firstRunKey, "true");
+  }, []);
 
   // Automatic refresh when page loads with no prior analysis
   useEffect(() => {
@@ -416,6 +427,13 @@ export default function Index() {
             <Banner tone="critical">
               <Text as="p" variant="bodyMd">
                 Refresh failed: {refreshError}
+              </Text>
+            </Banner>
+          )}
+          {showFirstRunNote && (
+            <Banner tone="info">
+              <Text as="p" variant="bodyMd">
+                We only show decisions when the numbers justify interrupting you.
               </Text>
             </Banner>
           )}

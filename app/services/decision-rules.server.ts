@@ -61,7 +61,7 @@ export async function detectBestSellerLoss(
     type: "best_seller_loss",
     headline: `£${monthlyLoss.toFixed(0)}/month at risk`,
     actionTitle: `Stop pushing ${productName} (or raise price by ${Math.abs(worst.marginPercent).toFixed(0)}%)`,
-    reason: `Sold ${worst.unitsSold} units in 90 days but lost £${Math.abs(worst.netProfit).toFixed(2)} total`,
+    reason: `Made £${worst.revenue.toFixed(2)} revenue but lost £${Math.abs(worst.netProfit).toFixed(2)} after COGS (£${worst.totalCOGS.toFixed(2)}), refunds (£${worst.refundedRevenue.toFixed(2)}), and shipping (£${worst.assumedShipping.toFixed(2)})`,
     impact: monthlyLoss,
     confidence: worst.unitsSold >= 20 ? "high" : worst.unitsSold >= 10 ? "medium" : "low",
     dataJson: {
@@ -193,7 +193,7 @@ export async function detectDiscountRefundHit(
     type: "discount_refund_hit",
     headline: `£${monthlyLoss.toFixed(0)}/month at risk`,
     actionTitle: `Stop discounting ${productName} (${worst.discountRate.toFixed(0)}% off + ${worst.refundRate.toFixed(0)}% refunded)`,
-    reason: `Lost £${totalLoss.toFixed(2)} on ${worst.unitsSold} units: heavy discounts + refunds = double loss`,
+    reason: `Discounted ${worst.discountRate.toFixed(0)}% on average, then ${worst.refundRate.toFixed(0)}% were refunded - lost £${totalLoss.toFixed(2)} total on ${worst.unitsSold} units (discounts: £${worst.totalDiscounts.toFixed(2)}, refunds: £${worst.refundedRevenue.toFixed(2)})`,
     impact: monthlyLoss,
     confidence: worst.unitsSold >= 20 ? "high" : worst.unitsSold >= 15 ? "medium" : "low",
     dataJson: {
@@ -222,6 +222,20 @@ export async function generateDecisions(
   shop: string,
   orders: OrderData[]
 ): Promise<{ created: number; decisions: DecisionData[] }> {
+  // Update shop stats
+  await prisma.shop.upsert({
+    where: { shop },
+    update: {
+      lastOrderCount: orders.length,
+      lastAnalyzedAt: new Date(),
+    },
+    create: {
+      shop,
+      lastOrderCount: orders.length,
+      lastAnalyzedAt: new Date(),
+    },
+  });
+
   // Clear old active decisions
   await prisma.decision.updateMany({
     where: {

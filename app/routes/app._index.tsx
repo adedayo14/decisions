@@ -10,10 +10,13 @@ import {
   InlineStack,
   Badge,
   Banner,
+  Collapsible,
+  DataTable,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { getActiveDecisions } from "../services/decision-rules.server";
-import { useEffect } from "react";
+import { prisma } from "../db.server";
+import { useEffect, useState } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -23,9 +26,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Load decisions with fallback - don't crash if DB has issues
   let decisions: Awaited<ReturnType<typeof getActiveDecisions>> = [];
+  let orderCount = 0;
+  let lastAnalyzedAt: string | null = null;
+
   try {
     decisions = await getActiveDecisions(shop);
     console.log("[app._index loader] Found decisions:", decisions.length);
+
+    // Get shop stats
+    const shopData = await prisma.shop.findUnique({
+      where: { shop },
+      select: { lastOrderCount: true, lastAnalyzedAt: true },
+    });
+
+    orderCount = shopData?.lastOrderCount ?? 0;
+    lastAnalyzedAt = shopData?.lastAnalyzedAt?.toISOString() ?? null;
   } catch (error) {
     console.error("[app._index loader] Error loading decisions (non-fatal):", error);
     // Continue with empty decisions - user can try "Refresh" button
@@ -33,6 +48,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return json({
     shop,
+    orderCount,
+    lastAnalyzedAt,
     decisions: decisions.map((d) => ({
       id: d.id,
       type: d.type,
@@ -42,16 +59,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       impact: d.impact,
       confidence: d.confidence,
       generatedAt: d.generatedAt.toISOString(),
+      dataJson: d.dataJson,
     })),
   });
 };
 
 export default function Index() {
-  const { decisions } = useLoaderData<typeof loader>();
+  const { decisions, orderCount, lastAnalyzedAt } = useLoaderData<typeof loader>();
   const refreshFetcher = useFetcher();
   const decisionFetcher = useFetcher();
+  const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
 
   const isRefreshing = refreshFetcher.state !== "idle";
+
+  const toggleNumbers = (decisionId: string) => {
+    setExpandedDecisions((prev) => {
+      const next = new Set(prev);
+      if (next.has(decisionId)) {
+        next.delete(decisionId);
+      } else {
+        next.add(decisionId);
+      }
+      return next;
+    });
+  };
 
   // Automatic refresh when page loads with no decisions
   useEffect(() => {
@@ -109,8 +140,41 @@ export default function Index() {
     }
   };
 
+  const formatCurrency = (value: number) => {
+    return `£${Math.abs(value).toFixed(2)}`;
+  };
+
+  const getNumbersTable = (decision: any) => {
+    const data = decision.dataJson || {};
+
+    const rows = [
+      ["Revenue", formatCurrency(data.revenue || 0)],
+      ["COGS", formatCurrency(data.cogs || 0)],
+      ["Discounts", formatCurrency(data.discounts || 0)],
+      ["Refunds", formatCurrency(data.refunds || 0)],
+      ["Estimated shipping", formatCurrency(data.shipping || 0)],
+      ["Net profit", data.netProfit < 0 ? `−${formatCurrency(data.netProfit)}` : formatCurrency(data.netProfit)],
+    ];
+
+    return (
+      <DataTable
+        columnContentTypes={["text", "numeric"]}
+        headings={["Metric", "Last 90 days"]}
+        rows={rows}
+      />
+    );
+  };
+
   return (
-    <Page title="Decisions">
+    <Page
+      title="Decisions"
+      secondaryActions={[
+        {
+          content: "Settings",
+          url: "/app/settings",
+        },
+      ]}
+    >
       <Layout>
         <Layout.Section>
           {decisions.length === 0 ? (
@@ -122,8 +186,15 @@ export default function Index() {
                 <Text as="p" variant="bodyMd" tone="subdued">
                   {isRefreshing
                     ? "We're analyzing your Shopify orders to find profit opportunities. This may take a moment..."
-                    : "We analyzed your Shopify data but haven't found any profit opportunities yet. Check back later as you get more orders."}
+                    : orderCount > 0
+                    ? `We analyzed ${orderCount} orders from the last 90 days but haven't found any profit opportunities yet. This is good - your margins look healthy!`
+                    : "We haven't analyzed your data yet. We'll automatically check your orders when you first load the app."}
                 </Text>
+                {orderCount > 0 && !isRefreshing && (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    For best results, we recommend having 100+ orders. Check back as you get more sales.
+                  </Text>
+                )}
               </BlockStack>
             </Card>
           ) : (
@@ -165,7 +236,26 @@ export default function Index() {
                       <Button onClick={() => handleMarkIgnored(decision.id)}>
                         Ignore
                       </Button>
+                      <Button
+                        onClick={() => toggleNumbers(decision.id)}
+                        disclosure={expandedDecisions.has(decision.id) ? "up" : "down"}
+                      >
+                        See numbers
+                      </Button>
                     </InlineStack>
+
+                    <Collapsible
+                      open={expandedDecisions.has(decision.id)}
+                      id={`numbers-${decision.id}`}
+                      transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
+                    >
+                      <BlockStack gap="300">
+                        <Text as="p" variant="bodyMd" tone="subdued">
+                          Detailed breakdown (last 90 days):
+                        </Text>
+                        {getNumbersTable(decision)}
+                      </BlockStack>
+                    </Collapsible>
                   </BlockStack>
                 </Card>
               ))}

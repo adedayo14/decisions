@@ -34,6 +34,8 @@ model Shop {
   id                  String   @id @default(cuid())
   shop                String   @unique  // mystore.myshopify.com
   assumedShippingCost Float    @default(3.50)  // Default £3.50 per order
+  lastOrderCount      Int?     // Last known order count (90 days)
+  lastAnalyzedAt      DateTime?  // When we last ran analysis
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

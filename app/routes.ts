@@ -11,6 +11,7 @@ export default [
   // App routes (authenticated)
   layout("routes/app.tsx", [
     route("app", "routes/app._index.tsx"),
+    route("app/settings", "routes/app.settings.tsx"),
     route("app/decision", "routes/app.decision.tsx"),
     route("app/refresh", "routes/app.refresh.tsx"),
   ]),

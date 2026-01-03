@@ -10,6 +10,12 @@ import {
 import { prisma } from "../db.server";
 import { getShopSettings } from "./shop-settings.server";
 import { getSeasonalContext, calculateRecentSalesPace } from "./seasonality.server";
+import {
+  buildOutcomeBaselineMetrics,
+  calibrateConfidence,
+  getConfidenceHistoryStats,
+  pickResurfacingCandidate,
+} from "./decision-outcomes.server";
 
 export interface DecisionData {
   type: "best_seller_loss" | "free_shipping_trap" | "discount_refund_hit";
@@ -20,6 +26,7 @@ export interface DecisionData {
   confidence: "high" | "medium" | "low";
   seasonalContext?: string | null; // v2: "X% worse than usual for this time of year"
   salesPaceContext?: string | null; // v2: "At your current sales pace (N orders in 30 days)"
+  runRateContext?: string | null; // v3: "At your current sales pace... If this continues for the next quarter."
   dataJson: {
     revenue: number;
     cogs: number;
@@ -33,7 +40,7 @@ export interface DecisionData {
 
 const MIN_ORDERS_FOR_DECISIONS = 30;
 const MIN_BEST_SELLER_UNITS = 10;
-const MIN_MONTHLY_IMPACT = 50; // Minimum £50/month impact to show decision
+const SYSTEM_MIN_IMPACT = 50;
 
 /**
  * Format currency with shop's currency symbol
@@ -76,22 +83,13 @@ export async function detectBestSellerLoss(
 
   const monthlyLoss = Math.abs(worst.netProfit) * (30 / 90); // Project to monthly
 
-  // v2: Require minimum monthly impact to be actionable
-  if (monthlyLoss < MIN_MONTHLY_IMPACT) {
-    return null;
-  }
-
   const productName = worst.productName.split(" - ")[0]; // Remove variant suffix
-  const priceIncreasePerUnit =
-    worst.unitsSold > 0 ? Math.abs(worst.netProfit) / worst.unitsSold : Math.abs(worst.netProfit);
+  const perUnitLoss = worst.unitsSold > 0 ? Math.abs(worst.netProfit) / worst.unitsSold : 0;
 
   return {
     type: "best_seller_loss",
     headline: `${formatCurrency(monthlyLoss, currencySymbol)}/month at risk`,
-    actionTitle: `Stop pushing ${productName} (or raise price by ${formatCurrency(
-      priceIncreasePerUnit,
-      currencySymbol
-    )} per unit)`,
+    actionTitle: `Stop pushing ${productName} (or raise price by ${formatCurrency(perUnitLoss, currencySymbol)} per unit)`,
     reason: `Made ${formatCurrency(worst.revenue, currencySymbol)} revenue but lost ${formatCurrency(Math.abs(worst.netProfit), currencySymbol)} after COGS (${formatCurrency(worst.totalCOGS, currencySymbol)}), refunds (${formatCurrency(worst.refundedRevenue, currencySymbol)}), and shipping (${formatCurrency(worst.assumedShipping, currencySymbol)})`,
     impact: monthlyLoss,
     confidence: worst.unitsSold >= 20 ? "high" : worst.unitsSold >= 10 ? "medium" : "low",
@@ -106,6 +104,7 @@ export async function detectBestSellerLoss(
       sku: worst.sku || "",
       productName: worst.productName,
       unitsSold: worst.unitsSold,
+      ordersCount: worst.ordersCount,
       marginPercent: worst.marginPercent,
     },
   };
@@ -241,6 +240,7 @@ export async function detectDiscountRefundHit(
       sku: worst.sku || "",
       productName: worst.productName,
       unitsSold: worst.unitsSold,
+      ordersCount: worst.ordersCount,
       refundedUnits: worst.refundedUnits,
       discountRate: worst.discountRate,
       refundRate: worst.refundRate,
@@ -275,6 +275,10 @@ export async function generateDecisions(
   // Get shop settings (including currency)
   const shopSettings = await getShopSettings(shop);
   const currencySymbol = shopSettings.currencySymbol;
+  const minImpactThreshold = Math.max(
+    shopSettings.minImpactThreshold ?? SYSTEM_MIN_IMPACT,
+    SYSTEM_MIN_IMPACT
+  );
 
   // Update shop stats
   await prisma.shop.update({
@@ -314,6 +318,9 @@ export async function generateDecisions(
   const seasonalContext = getSeasonalContext(orders);
   const salesPace30Days = calculateRecentSalesPace(orders, 30);
   const salesPaceMessage = `At your current sales pace (${salesPace30Days} orders in 30 days)`;
+  const runRateMessage = `${salesPaceMessage}. If this continues for the next quarter.`;
+
+  const confidenceStats = await getConfidenceHistoryStats(shop);
 
   // Run all detection rules with currency symbol
   const [bestSellerLoss, freeShippingTrap, discountRefundHit] = await Promise.all([
@@ -334,16 +341,98 @@ export async function generateDecisions(
     if (seasonalContext.hasEnoughData && seasonalContext.seasonalMessage) {
       decision.seasonalContext = seasonalContext.seasonalMessage;
     }
+    decision.runRateContext = runRateMessage;
   }
 
   // Sort by impact (highest first)
   const sortedDecisions = allDecisions.sort((a, b) => b.impact - a.impact);
 
+  // v3: Confidence calibration and baseline metrics
+  for (const decision of sortedDecisions) {
+    const baseConfidence = decision.confidence;
+    const historyKey = `${decision.type}:${baseConfidence}`;
+    const history = confidenceStats.get(historyKey);
+    const calibration = calibrateConfidence(baseConfidence, history);
+
+    decision.confidence = calibration.confidence;
+    decision.dataJson.confidenceHistoryRate = calibration.successRate ?? null;
+    decision.dataJson.confidenceHistoryTotal = calibration.total ?? null;
+
+    const baselineMetrics = await buildOutcomeBaselineMetrics(
+      shop,
+      { type: decision.type, dataJson: decision.dataJson },
+      orders
+    );
+    decision.dataJson.outcomeBaseline =
+      baselineMetrics ??
+      {
+        netProfitPerOrder: 0,
+        refundRate: 0,
+        shippingLossPerOrder: 0,
+        ordersCount: 0,
+      };
+  }
+
+  // v3: Resurfacing ignored decisions when impact grows materially
+  const decisionKeys = sortedDecisions.map((decision) => generateDecisionKey(decision));
+  const ignoredDecisions = await prisma.decision.findMany({
+    where: {
+      shop,
+      status: "ignored",
+      decisionKey: { in: decisionKeys },
+    },
+    select: {
+      id: true,
+      decisionKey: true,
+      impact: true,
+      resurfacedAt: true,
+    },
+  });
+
+  const resurfacingCandidate = pickResurfacingCandidate(
+    sortedDecisions.map((decision, index) => ({
+      ...decision,
+      decisionKey: decisionKeys[index],
+    })),
+    ignoredDecisions
+  );
+
+  if (resurfacingCandidate && resurfacingCandidate.newDecision.impact >= minImpactThreshold) {
+    const { newDecision, ignoredDecision } = resurfacingCandidate;
+    newDecision.dataJson.resurfacedFromImpact = ignoredDecision.impact;
+    newDecision.dataJson.resurfacedFromDecisionId = ignoredDecision.id;
+    newDecision.dataJson.isResurfaced = true;
+
+    await prisma.decision.update({
+      where: { id: ignoredDecision.id },
+      data: { resurfacedAt: new Date() },
+    });
+  }
+
+  // Apply min impact threshold to surfaced decisions
+  const surfacedDecisions = sortedDecisions.filter(
+    (decision) => decision.impact >= minImpactThreshold
+  );
+
+  const activeDecisions = surfacedDecisions.slice(0, 3);
+
+  if (resurfacingCandidate && resurfacingCandidate.newDecision.impact >= minImpactThreshold) {
+    const alreadyActive = activeDecisions.includes(resurfacingCandidate.newDecision);
+    if (!alreadyActive) {
+      if (activeDecisions.length < 3) {
+        activeDecisions.push(resurfacingCandidate.newDecision);
+      } else {
+        activeDecisions[activeDecisions.length - 1] = resurfacingCandidate.newDecision;
+      }
+    }
+  }
+
   // v2: Save ALL decisions to database (not just top 3)
   // Only top 3 will have status "active", rest are "done"
   for (let i = 0; i < sortedDecisions.length; i++) {
     const decision = sortedDecisions[i];
-    const isTopThree = i < 3;
+    const decisionKey = decisionKeys[i];
+    const isTopThree = activeDecisions.includes(decision);
 
     await prisma.decision.create({
       data: {
@@ -359,9 +448,10 @@ export async function generateDecisions(
           ...decision.dataJson,
           seasonalContext: decision.seasonalContext || null,
           salesPaceContext: decision.salesPaceContext || null,
+          runRateContext: decision.runRateContext || null,
         },
         runId: decisionRun.id,
-        decisionKey: generateDecisionKey(decision),
+        decisionKey,
         completedAt: isTopThree ? null : new Date(),
       },
     });
@@ -369,7 +459,7 @@ export async function generateDecisions(
 
   return {
     created: sortedDecisions.length,
-    decisions: sortedDecisions.slice(0, 3), // Return top 3 for UI
+    decisions: activeDecisions, // Return surfaced decisions for UI
   };
 }
 
@@ -392,13 +482,47 @@ export async function getActiveDecisions(shop: string) {
  * Mark a decision as done
  */
 export async function markDecisionDone(decisionId: string) {
-  return prisma.decision.update({
+  const decision = await prisma.decision.findUnique({
+    where: { id: decisionId },
+    select: { id: true, dataJson: true },
+  });
+
+  if (!decision) {
+    throw new Error("Decision not found");
+  }
+
+  await prisma.decision.update({
     where: { id: decisionId },
     data: {
       status: "done",
       completedAt: new Date(),
     },
   });
+
+  const baselineMetrics =
+    (decision.dataJson as any)?.outcomeBaseline ??
+    {
+      netProfitPerOrder: 0,
+      refundRate: 0,
+      shippingLossPerOrder: 0,
+      ordersCount: 0,
+    };
+
+  await prisma.decisionOutcome.upsert({
+    where: { decisionId },
+    update: {
+      baselineMetrics,
+      evaluatedAt: null,
+      postMetrics: null,
+      outcomeStatus: null,
+    },
+    create: {
+      decisionId,
+      baselineMetrics,
+    },
+  });
+
+  return null;
 }
 
 /**

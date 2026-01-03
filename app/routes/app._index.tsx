@@ -42,6 +42,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let lastAnalyzedAt: string | null = null;
   let currencySymbol = "£"; // Default fallback
   let cogsCount = 0;
+  let minImpactThreshold = 50;
+  let decisionOutcomes: any[] = [];
 
   try {
     // Build filter conditions
@@ -84,18 +86,38 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Get shop stats and currency
     const shopData = await prisma.shop.findUnique({
       where: { shop },
-      select: { lastOrderCount: true, lastAnalyzedAt: true, currencySymbol: true },
+      select: {
+        lastOrderCount: true,
+        lastAnalyzedAt: true,
+        currencySymbol: true,
+        minImpactThreshold: true,
+      },
     });
 
     orderCount = shopData?.lastOrderCount ?? 0;
     lastAnalyzedAt = shopData?.lastAnalyzedAt?.toISOString() ?? null;
     currencySymbol = shopData?.currencySymbol ?? "£";
+    minImpactThreshold = shopData?.minImpactThreshold ?? 50;
 
     cogsCount = await prisma.cOGS.count({ where: { shop } });
+
+    if (decisions.length > 0) {
+      decisionOutcomes = await prisma.decisionOutcome.findMany({
+        where: {
+          decisionId: { in: decisions.map((decision) => decision.id) },
+        },
+      });
+    }
   } catch (error) {
     console.error("[app._index loader] Error loading decisions (non-fatal):", error);
     // Continue with empty decisions - user can try "Refresh" button
   }
+
+  const outcomesByDecision = new Map(
+    decisionOutcomes.map((outcome) => [outcome.decisionId, outcome])
+  );
+
+  const now = new Date();
 
   return json({
     shop,
@@ -103,6 +125,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     lastAnalyzedAt,
     cogsCount,
     minOrdersRequired: MIN_ORDERS_FOR_DECISIONS,
+    minImpactThreshold,
     currencySymbol,
     filters: {
       status: statusFilter,
@@ -121,12 +144,63 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       confidence: d.confidence,
       generatedAt: d.generatedAt.toISOString(),
       dataJson: d.dataJson,
+      completedAt: d.completedAt?.toISOString() ?? null,
+      outcome: (() => {
+        const outcome = outcomesByDecision.get(d.id);
+        if (!outcome || d.status !== "done") {
+          return null;
+        }
+
+        const windowDays = outcome.windowDays ?? 30;
+        if (!outcome.evaluatedAt || !outcome.postMetrics) {
+          if (!d.completedAt) return null;
+          const end = new Date(d.completedAt);
+          end.setDate(end.getDate() + windowDays);
+          const msRemaining = end.getTime() - now.getTime();
+          const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+          return {
+            status: "tracking",
+            message: `Still tracking outcome (${daysRemaining} days remaining).`,
+          };
+        }
+
+        const baseline = outcome.baselineMetrics as any;
+        const post = outcome.postMetrics as any;
+        const delta = (post.netProfitPerOrder ?? 0) - (baseline.netProfitPerOrder ?? 0);
+        const deltaText = `${currencySymbol}${Math.abs(delta).toFixed(2)}`;
+
+        if (outcome.outcomeStatus === "improved") {
+          return {
+            status: "improved",
+            message: `After you acted, net profit per order improved by ${deltaText} over ${windowDays} days.`,
+          };
+        }
+        if (outcome.outcomeStatus === "worsened") {
+          return {
+            status: "worsened",
+            message: `After you acted, net profit per order fell by ${deltaText} over ${windowDays} days.`,
+          };
+        }
+        return {
+          status: "no_change",
+          message: `No clear change in net profit per order over ${windowDays} days.`,
+        };
+      })(),
     })),
   });
 };
 
 export default function Index() {
-  const { decisions, orderCount, lastAnalyzedAt, cogsCount, minOrdersRequired, currencySymbol, filters } =
+  const {
+    decisions,
+    orderCount,
+    lastAnalyzedAt,
+    cogsCount,
+    minOrdersRequired,
+    minImpactThreshold,
+    currencySymbol,
+    filters,
+  } =
     useLoaderData<typeof loader>();
   const refreshFetcher = useFetcher();
   const decisionFetcher = useFetcher();
@@ -241,10 +315,10 @@ export default function Index() {
 
     return (
       <BlockStack gap="200">
-        {data.salesPaceContext && (
+        {(data.runRateContext || data.salesPaceContext) && (
           <Banner tone="info">
             <Text as="p" variant="bodySm">
-              {data.salesPaceContext}
+              {data.runRateContext || data.salesPaceContext}
             </Text>
           </Banner>
         )}
@@ -443,7 +517,7 @@ export default function Index() {
             <BlockStack gap="400">
               <Banner tone="info">
                 <Text as="p" variant="bodyMd">
-                  Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}{filters.status !== "active" || filters.type !== "all" || filters.confidence !== "all" ? " (filtered)" : ""}.
+                  Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}{filters.status !== "active" || filters.type !== "all" || filters.confidence !== "all" ? " (filtered)" : ""}. Minimum impact filter: {currencySymbol}{minImpactThreshold.toFixed(0)}/month.
                 </Text>
               </Banner>
 
@@ -459,6 +533,15 @@ export default function Index() {
                           {getConfidenceBadge(decision.confidence)}
                           {decision.status === "done" && <Badge>Done</Badge>}
                           {decision.status === "ignored" && <Badge tone="info">Ignored</Badge>}
+                          {decision.outcome?.status === "improved" && (
+                            <Badge tone="success">Improved</Badge>
+                          )}
+                          {decision.outcome?.status === "worsened" && (
+                            <Badge tone="critical">Worsened</Badge>
+                          )}
+                          {decision.outcome?.status === "no_change" && (
+                            <Badge tone="attention">No clear change</Badge>
+                          )}
                         </InlineStack>
                         <Text as="p" variant="headingMd">
                           {decision.actionTitle}
@@ -466,6 +549,27 @@ export default function Index() {
                         <Text as="p" variant="bodyMd" tone="subdued">
                           {decision.reason}
                         </Text>
+                        {decision.dataJson?.runRateContext && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {decision.dataJson.runRateContext}
+                          </Text>
+                        )}
+                        {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            You ignored this earlier. The impact has grown from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to {formatCurrency(decision.impact)}.
+                          </Text>
+                        )}
+                        {decision.dataJson?.confidenceHistoryRate !== null &&
+                          decision.dataJson?.confidenceHistoryTotal >= 5 && (
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              Decisions like this have improved outcomes ~{Math.round(decision.dataJson.confidenceHistoryRate * 100)}% of the time for your store.
+                            </Text>
+                          )}
+                        {decision.outcome?.message && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {decision.outcome.message}
+                          </Text>
+                        )}
                       </BlockStack>
                     </InlineStack>
 

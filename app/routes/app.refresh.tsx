@@ -3,6 +3,7 @@ import { authenticate } from "../shopify.server";
 import { ingestShopifyData, getOrderData } from "../services/data-ingestion.server";
 import { generateDecisions } from "../services/decision-rules.server";
 import { clearShopCache } from "../services/data-cache.server";
+import { evaluateDecisionOutcomes } from "../services/decision-outcomes.server";
 
 async function getAccessScopes(admin: Awaited<ReturnType<typeof authenticate.admin>>["admin"]) {
   const response = await admin.graphql(`
@@ -68,6 +69,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     await generateDecisions(shop, orders);
     console.log("[app.refresh] Decisions generated");
+
+    await evaluateDecisionOutcomes(shop, orders);
+    console.log("[app.refresh] Decision outcomes evaluated");
 
     return json({ success: true, ordersCount: orders.length });
   } catch (error) {

@@ -13,6 +13,7 @@
     "start": "remix-serve ./build/server/index.js",
     "setup": "prisma generate && prisma db push",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
+    "test": "node --test --loader tsx",
     "shopify": "shopify",
     "prisma": "prisma"
   },
@@ -51,6 +52,7 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "prettier": "^3.2.4",
     "prisma": "6.16.2",
+    "tsx": "^4.19.4",
     "typescript": "^5.2.2",
     "vite": "^6.2.2"
   },

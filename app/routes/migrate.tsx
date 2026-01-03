@@ -58,7 +58,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
       `CREATE TABLE IF NOT EXISTS "Shop" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "shop" TEXT UNIQUE NOT NULL,
+        "currency" TEXT NOT NULL DEFAULT 'GBP',
+        "currencySymbol" TEXT NOT NULL DEFAULT '£',
         "assumedShippingCost" DOUBLE PRECISION NOT NULL DEFAULT 3.50,
+        "minImpactThreshold" DOUBLE PRECISION NOT NULL DEFAULT 50,
+        "lastOrderCount" INTEGER,
+        "lastAnalyzedAt" TIMESTAMP,
         "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
       )`,
@@ -91,6 +96,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
         "impact" DOUBLE PRECISION NOT NULL,
         "confidence" TEXT NOT NULL,
         "dataJson" JSONB NOT NULL,
+        "runId" TEXT,
+        "decisionKey" TEXT NOT NULL DEFAULT '',
+        "resurfacedAt" TIMESTAMP,
         "generatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
         "completedAt" TIMESTAMP,
         "ignoredAt" TIMESTAMP
@@ -100,6 +108,32 @@ export async function loader({ request }: LoaderFunctionArgs) {
       `CREATE INDEX IF NOT EXISTS "Decision_shop_status_idx" ON "Decision"("shop", "status")`,
       `CREATE INDEX IF NOT EXISTS "Decision_shop_generatedAt_idx" ON "Decision"("shop", "generatedAt")`,
       `CREATE INDEX IF NOT EXISTS "Decision_shop_type_status_idx" ON "Decision"("shop", "type", "status")`,
+      `CREATE INDEX IF NOT EXISTS "Decision_shop_runId_idx" ON "Decision"("shop", "runId")`,
+      `CREATE INDEX IF NOT EXISTS "Decision_shop_decisionKey_idx" ON "Decision"("shop", "decisionKey")`,
+
+      // DecisionRun table (history)
+      `CREATE TABLE IF NOT EXISTS "DecisionRun" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "shop" TEXT NOT NULL,
+        "generatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+        "orderCount" INTEGER NOT NULL,
+        "windowDays" INTEGER NOT NULL DEFAULT 90,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS "DecisionRun_shop_generatedAt_idx" ON "DecisionRun"("shop", "generatedAt")`,
+
+      // DecisionOutcome table (v3)
+      `CREATE TABLE IF NOT EXISTS "DecisionOutcome" (
+        "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        "decisionId" TEXT NOT NULL UNIQUE,
+        "baselineMetrics" JSONB NOT NULL,
+        "postMetrics" JSONB,
+        "outcomeStatus" TEXT,
+        "evaluatedAt" TIMESTAMP,
+        "windowDays" INTEGER NOT NULL DEFAULT 30,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS "DecisionOutcome_decisionId_idx" ON "DecisionOutcome"("decisionId")`,
 
       // DataCache table
       `CREATE TABLE IF NOT EXISTS "DataCache" (
@@ -115,6 +149,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
       // Create indexes for DataCache
       `CREATE INDEX IF NOT EXISTS "DataCache_shop_idx" ON "DataCache"("shop")`,
       `CREATE INDEX IF NOT EXISTS "DataCache_expiresAt_idx" ON "DataCache"("expiresAt")`,
+
+      // Backfill columns for existing tables
+      `ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "currency" TEXT NOT NULL DEFAULT 'GBP'`,
+      `ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "currencySymbol" TEXT NOT NULL DEFAULT '£'`,
+      `ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "minImpactThreshold" DOUBLE PRECISION NOT NULL DEFAULT 50`,
+      `ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "lastOrderCount" INTEGER`,
+      `ALTER TABLE "Shop" ADD COLUMN IF NOT EXISTS "lastAnalyzedAt" TIMESTAMP`,
+      `ALTER TABLE "Decision" ADD COLUMN IF NOT EXISTS "runId" TEXT`,
+      `ALTER TABLE "Decision" ADD COLUMN IF NOT EXISTS "decisionKey" TEXT NOT NULL DEFAULT ''`,
+      `ALTER TABLE "Decision" ADD COLUMN IF NOT EXISTS "resurfacedAt" TIMESTAMP`,
     ];
 
     const results = [];

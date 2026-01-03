@@ -6,7 +6,7 @@ No fluff. No generic advice. Just data-backed decisions with the maths to prove 
 
 ## What It Does
 
-Decisions v2 analyzes your last 90 days of orders and looks for three specific profit-killing patterns, with enhanced seasonality analysis and decision history:
+Decisions v3 analyzes your last 90 days of orders and looks for three specific profit-killing patterns, with outcome tracking and decision history:
 
 ### 1. Best-Seller Loss
 **What it catches:** Products selling well but losing money after COGS, refunds, and shipping.
@@ -189,6 +189,33 @@ Products without COGS are **excluded** from COGS-dependent decisions (Best-Selle
 
 ---
 
+## What's New in v3
+
+### ✅ Decision Outcomes (No Causality Claims)
+- Mark a decision as Done to start a 30-day observation window
+- Compare before vs after metrics (net profit per order, refund rate, shipping loss per order)
+- Outcome statuses: Improved, No clear change, Worsened
+- Clear copy that avoids causal claims
+
+### ✅ Store-Specific Confidence Calibration
+- Confidence is adjusted using your own outcome history
+- High never drops to Low
+- Subtle shifts only when enough history exists
+
+### ✅ Run-Rate Framing
+- Short context lines (sales pace + quarter framing)
+- No new math or inflated projections
+
+### ✅ Resurfacing (Anti-Forgetfulness)
+- Ignored decisions can reappear if impact grows materially
+- Calm copy, one resurfacing per decision
+
+### ✅ Personal Impact Threshold
+- "Only show decisions worth at least £___ / month"
+- Filters surfaced decisions only; history remains intact
+
+---
+
 ## What's New in v2
 
 ### ✅ Decision History
@@ -239,6 +266,7 @@ Be clear about limitations:
 - ❌ No automatic price changes
 - ❌ No integration with other tools (yet)
 - ❌ No dashboard (deliberately avoided feature creep)
+- ❌ No causality claims (outcomes are observational only)
 
 Philosophy: **Find profit leaks with transparent maths. Show context. Let the merchant decide.**
 
@@ -277,7 +305,7 @@ npm run deploy
 
 ---
 
-## Known Limitations (v2)
+## Known Limitations (v3)
 
 1. **90-day window only** - can't analyze longer timeframes (future: customizable windows)
 2. **No refund tracking by reason** - treats all refunds equally
@@ -285,12 +313,13 @@ npm run deploy
 4. **Free shipping threshold is inferred** - not pulled from settings (Shopify doesn't expose via API)
 5. **Seasonality requires 12+ weeks** - earlier data won't show seasonal context
 6. **CSV upload requires variant_id or unique SKU** - ambiguous SKUs are skipped
+7. **Outcome tracking is observational** - comparisons only, no causality claims
 
 ---
 
 ## Support
 
-This is a v1 release. If you find bugs or have feedback:
+This is a v3 release. If you find bugs or have feedback:
 
 - **Issues:** [GitHub Issues](https://github.com/adedayo14/decisions/issues)
 - **Email:** adedayo@example.com

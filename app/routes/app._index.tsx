@@ -16,35 +16,34 @@ import { getActiveDecisions } from "../services/decision-rules.server";
 import { useState } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const shop = session.shop;
+
+  console.log("[app._index loader] Authenticated shop:", shop);
+
+  // Load decisions with fallback - don't crash if DB has issues
+  let decisions: Awaited<ReturnType<typeof getActiveDecisions>> = [];
   try {
-    const { session } = await authenticate.admin(request);
-    const shop = session.shop;
-
-    console.log("[app._index loader] Loading decisions for shop:", shop);
-
-    // Just load existing decisions - don't generate on every page load
-    // Use "Refresh Decisions" button to generate new ones
-    const decisions = await getActiveDecisions(shop);
-
+    decisions = await getActiveDecisions(shop);
     console.log("[app._index loader] Found decisions:", decisions.length);
-
-    return json({
-      shop,
-      decisions: decisions.map((d) => ({
-        id: d.id,
-        type: d.type,
-        headline: d.headline,
-        actionTitle: d.actionTitle,
-        reason: d.reason,
-        impact: d.impact,
-        confidence: d.confidence,
-        generatedAt: d.generatedAt.toISOString(),
-      })),
-    });
   } catch (error) {
-    console.error("[app._index loader] Error:", error);
-    throw error;
+    console.error("[app._index loader] Error loading decisions (non-fatal):", error);
+    // Continue with empty decisions - user can try "Refresh" button
   }
+
+  return json({
+    shop,
+    decisions: decisions.map((d) => ({
+      id: d.id,
+      type: d.type,
+      headline: d.headline,
+      actionTitle: d.actionTitle,
+      reason: d.reason,
+      impact: d.impact,
+      confidence: d.confidence,
+      generatedAt: d.generatedAt.toISOString(),
+    })),
+  });
 };
 
 export default function Index() {

@@ -80,8 +80,8 @@ const ORDERS_QUERY = `
               amount
             }
           }
-          financialStatus
-          fulfillmentStatus
+          displayFinancialStatus
+          displayFulfillmentStatus
           shippingLine {
             originalPriceSet {
               shopMoney {
@@ -207,8 +207,8 @@ export async function fetchOrdersLast90Days(
         totalShippingPrice: node.totalShippingPriceSet.shopMoney.amount,
         totalDiscounts: node.totalDiscountsSet.shopMoney.amount,
         totalTax: node.totalTaxSet.shopMoney.amount,
-        financialStatus: node.financialStatus,
-        fulfillmentStatus: node.fulfillmentStatus,
+        financialStatus: node.displayFinancialStatus,
+        fulfillmentStatus: node.displayFulfillmentStatus,
         shippingLine: node.shippingLine
           ? {
               price: node.shippingLine.originalPriceSet.shopMoney.amount,

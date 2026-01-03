@@ -12,27 +12,16 @@ import {
   Banner,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { ingestShopifyData } from "../services/data-ingestion.server";
-import { getOrderData } from "../services/data-ingestion.server";
-import { generateDecisions, getActiveDecisions } from "../services/decision-rules.server";
+import { getActiveDecisions } from "../services/decision-rules.server";
 import { useState } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  let decisions = await getActiveDecisions(shop);
-
-  if (decisions.length === 0) {
-    try {
-      await ingestShopifyData(shop, admin);
-      const orders = await getOrderData(shop, admin);
-      const result = await generateDecisions(shop, orders);
-      decisions = await getActiveDecisions(shop);
-    } catch (error) {
-      console.error("Failed to generate initial decisions:", error);
-    }
-  }
+  // Just load existing decisions - don't generate on every page load
+  // Use "Refresh Decisions" button to generate new ones
+  const decisions = await getActiveDecisions(shop);
 
   return json({
     shop,

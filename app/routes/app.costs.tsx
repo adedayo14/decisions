@@ -267,11 +267,18 @@ async function getVariantDetails(
               sku: node.sku || "",
               price: parseFloat(node.price || "0"),
             });
+            // Also store with full GID for compatibility
+            detailsMap.set(node.id, {
+              productName: node.product?.title || "Unknown Product",
+              sku: node.sku || "",
+              price: parseFloat(node.price || "0"),
+            });
           }
         }
       }
     } catch (error) {
       console.error("Error fetching variant details:", error);
+      console.error("GraphQL response:", data);
     }
   }
 
@@ -306,14 +313,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Fetch variant details from Shopify
   const variantDetails = await getVariantDetails(admin, allCogs.map(c => c.variantId));
 
-  const costsWithDetails = allCogs.map(cog => ({
-    variantId: cog.variantId,
-    productName: variantDetails.get(cog.variantId)?.productName || "Unknown",
-    sku: variantDetails.get(cog.variantId)?.sku || "",
-    cost: cog.costGbp,
-    source: cog.source,
-    price: variantDetails.get(cog.variantId)?.price || 0,
-  }));
+  const costsWithDetails = allCogs.map(cog => {
+    // Handle both GID and numeric ID formats
+    const lookupKey = cog.variantId.includes('/')
+      ? cog.variantId.split('/').pop()
+      : cog.variantId;
+
+    const details = variantDetails.get(lookupKey || cog.variantId);
+
+    return {
+      variantId: cog.variantId,
+      productName: details?.productName || "Unknown",
+      sku: details?.sku || "",
+      cost: cog.costGbp,
+      source: cog.source,
+      price: details?.price || 0,
+    };
+  });
 
   return json({
     shopifyCount,

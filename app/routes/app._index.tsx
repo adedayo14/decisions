@@ -166,6 +166,10 @@ export default function Index() {
 
   const getNumbersTable = (decision: any) => {
     const data = decision.dataJson || {};
+    const netProfit = Number(data.netProfit ?? 0);
+    const netProfitText =
+      netProfit < 0 ? `-${formatCurrency(netProfit)}` : formatCurrency(netProfit);
+    const netProfitTone = netProfit < 0 ? "critical" : "success";
 
     const rows = [
       ["Revenue", formatCurrency(data.revenue || 0)],
@@ -173,15 +177,22 @@ export default function Index() {
       ["Discounts", formatCurrency(data.discounts || 0)],
       ["Refunds", formatCurrency(data.refunds || 0)],
       ["Estimated shipping", formatCurrency(data.shipping || 0)],
-      ["Net profit", data.netProfit < 0 ? `−${formatCurrency(data.netProfit)}` : formatCurrency(data.netProfit)],
+      ["Net profit", netProfitText],
     ];
 
     return (
-      <DataTable
-        columnContentTypes={["text", "numeric"]}
-        headings={["Metric", "Last 90 days"]}
-        rows={rows}
-      />
+      <BlockStack gap="200">
+        <Banner tone={netProfitTone}>
+          <Text as="p" variant="bodySm">
+            Net profit {netProfit < 0 ? "loss" : "gain"}: {netProfitText}
+          </Text>
+        </Banner>
+        <DataTable
+          columnContentTypes={["text", "numeric"]}
+          headings={["Metric", "Last 90 days"]}
+          rows={rows}
+        />
+      </BlockStack>
     );
   };
 

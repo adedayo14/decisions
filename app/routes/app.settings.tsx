@@ -24,6 +24,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     where: { shop },
     select: {
       assumedShippingCost: true,
+      minImpactThreshold: true,
       currencySymbol: true,
       currency: true,
     },
@@ -58,6 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return json({
     assumedShippingCost: shopSettings?.assumedShippingCost ?? 3.50,
+    minImpactThreshold: shopSettings?.minImpactThreshold ?? 50,
     currencySymbol: shopSettings?.currencySymbol ?? "£",
     currency: shopSettings?.currency ?? "GBP",
     cogsSummary,
@@ -70,27 +72,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const formData = await request.formData();
   const assumedShippingCost = parseFloat(formData.get("assumedShippingCost") as string);
+  const minImpactThresholdInput = parseFloat(formData.get("minImpactThreshold") as string);
 
   if (isNaN(assumedShippingCost) || assumedShippingCost < 0) {
     return json({ error: "Invalid shipping cost" }, { status: 400 });
   }
 
+  if (isNaN(minImpactThresholdInput)) {
+    return json({ error: "Invalid minimum impact threshold" }, { status: 400 });
+  }
+
+  const minImpactThreshold = Math.max(50, minImpactThresholdInput);
+
   await prisma.shop.update({
     where: { shop },
-    data: { assumedShippingCost },
+    data: { assumedShippingCost, minImpactThreshold },
   });
 
   return json({ success: true });
 };
 
 export default function Settings() {
-  const { assumedShippingCost, currencySymbol, currency, cogsSummary } =
+  const { assumedShippingCost, minImpactThreshold, currencySymbol, currency, cogsSummary } =
     useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const cogsFetcher = useFetcher();
   const location = useLocation();
 
   const [shippingCost, setShippingCost] = useState(assumedShippingCost.toString());
+  const [impactThreshold, setImpactThreshold] = useState(minImpactThreshold.toString());
   const [showSuccess, setShowSuccess] = useState(false);
   const [cogsFile, setCogsFile] = useState<File | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -141,7 +151,7 @@ export default function Settings() {
 
   const handleSave = () => {
     fetcher.submit(
-      { assumedShippingCost: shippingCost },
+      { assumedShippingCost: shippingCost, minImpactThreshold: impactThreshold },
       { method: "post" }
     );
   };
@@ -182,6 +192,35 @@ export default function Settings() {
                   onChange={setShippingCost}
                   prefix={currencySymbol}
                   helpText="Average cost you pay to ship an order. Used when calculating Best-Seller Loss and Free-Shipping Trap decisions."
+                  autoComplete="off"
+                />
+
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  loading={isSaving}
+                >
+                  Save Settings
+                </Button>
+              </BlockStack>
+            </Card>
+
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
+                  Decision Filtering
+                </Text>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Only show decisions worth at least this amount per month. You can raise it, but not lower below {currencySymbol}50.
+                </Text>
+
+                <TextField
+                  label="Minimum impact per month"
+                  type="number"
+                  value={impactThreshold}
+                  onChange={setImpactThreshold}
+                  prefix={currencySymbol}
+                  helpText="Filters surfaced decisions only. History remains intact."
                   autoComplete="off"
                 />
 

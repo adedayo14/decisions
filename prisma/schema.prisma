@@ -36,6 +36,7 @@ model Shop {
   currency            String   @default("GBP")  // Shop's currency code (USD, EUR, GBP, etc.)
   currencySymbol      String   @default("£")    // Currency symbol for display
   assumedShippingCost Float    @default(3.50)  // Default shipping cost per order
+  minImpactThreshold  Float    @default(50)  // Minimum impact per month to surface decisions
   lastOrderCount      Int?     // Last known order count (90 days)
   lastAnalyzedAt      DateTime?  // When we last ran analysis
   createdAt           DateTime @default(now())
@@ -89,6 +90,7 @@ model Decision {
   // v2: Link to decision run and stable key for tracking
   runId       String?  // Link to DecisionRun
   decisionKey String   @default("") // Stable key for tracking repeats (e.g., "best_seller_loss:variant_12345")
+  resurfacedAt DateTime?
 
   // Metadata
   generatedAt DateTime @default(now())
@@ -100,6 +102,20 @@ model Decision {
   @@index([shop, type, status])
   @@index([shop, runId])
   @@index([shop, decisionKey])
+}
+
+// Decision outcomes (v3)
+model DecisionOutcome {
+  id              String   @id @default(cuid())
+  decisionId      String   @unique
+  baselineMetrics Json
+  postMetrics     Json?
+  outcomeStatus   String?
+  evaluatedAt     DateTime?
+  windowDays      Int      @default(30)
+  createdAt       DateTime @default(now())
+
+  @@index([decisionId])
 }
 
 // Cache for aggregated Shopify data (avoid re-fetching constantly)

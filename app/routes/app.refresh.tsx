@@ -21,6 +21,12 @@ async function getAccessScopes(admin: Awaited<ReturnType<typeof authenticate.adm
 }
 
 function formatUnknownError(error: unknown) {
+  if (error instanceof Error) {
+    if (error.cause) {
+      return `${error.message} (${String(error.cause)})`;
+    }
+    return error.message;
+  }
   if (typeof error === "string") return error;
   if (error && typeof error === "object") {
     if ("message" in error && typeof error.message === "string") {
@@ -29,6 +35,12 @@ function formatUnknownError(error: unknown) {
     if ("errors" in error && Array.isArray((error as any).errors)) {
       const first = (error as any).errors[0];
       if (first?.message) return first.message;
+    }
+  }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
     }
   }
   return "Unexpected error during refresh. Please retry.";
@@ -70,8 +82,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await generateDecisions(shop, orders);
     console.log("[app.refresh] Decisions generated");
 
-    await evaluateDecisionOutcomes(shop, orders);
-    console.log("[app.refresh] Decision outcomes evaluated");
+    try {
+      await evaluateDecisionOutcomes(shop, orders);
+      console.log("[app.refresh] Decision outcomes evaluated");
+    } catch (outcomeError) {
+      console.warn("[app.refresh] Outcome evaluation skipped:", outcomeError);
+    }
 
     return json({ success: true, ordersCount: orders.length });
   } catch (error) {
@@ -80,7 +96,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Return error as JSON so we can see what failed
     return json(
       {
-        error: error instanceof Error ? error.message : formatUnknownError(error),
+        error: formatUnknownError(error),
         stack: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }

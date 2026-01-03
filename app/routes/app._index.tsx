@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useFetcher, useLocation } from "@remix-run/react";
+import { useLoaderData, useFetcher, useLocation, useSearchParams } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -13,11 +13,13 @@ import {
   Collapsible,
   DataTable,
   EmptyState,
+  ChoiceList,
+  Select,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { getActiveDecisions } from "../services/decision-rules.server";
 import { prisma } from "../db.server";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const MIN_ORDERS_FOR_DECISIONS = 30;
 
@@ -27,15 +29,56 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   console.log("[app._index loader] Authenticated shop:", shop);
 
+  // Parse URL search params for filters
+  const url = new URL(request.url);
+  const statusFilter = url.searchParams.get("status") || "active";
+  const typeFilter = url.searchParams.get("type") || "all";
+  const confidenceFilter = url.searchParams.get("confidence") || "all";
+  const sortBy = url.searchParams.get("sort") || "impact";
+
   // Load decisions with fallback - don't crash if DB has issues
-  let decisions: Awaited<ReturnType<typeof getActiveDecisions>> = [];
+  let decisions: any[] = [];
   let orderCount = 0;
   let lastAnalyzedAt: string | null = null;
   let currencySymbol = "£"; // Default fallback
   let cogsCount = 0;
 
   try {
-    decisions = await getActiveDecisions(shop);
+    // Build filter conditions
+    const where: any = { shop };
+
+    // Status filter
+    if (statusFilter !== "all") {
+      where.status = statusFilter;
+    }
+
+    // Type filter
+    if (typeFilter !== "all") {
+      where.type = typeFilter;
+    }
+
+    // Confidence filter
+    if (confidenceFilter !== "all") {
+      where.confidence = confidenceFilter;
+    }
+
+    // Build sort order
+    const orderBy: any[] = [];
+    if (sortBy === "impact") {
+      orderBy.push({ impact: "desc" });
+    } else if (sortBy === "confidence") {
+      // Sort: high > medium > low
+      orderBy.push({ confidence: "desc" });
+      orderBy.push({ impact: "desc" });
+    } else if (sortBy === "newest") {
+      orderBy.push({ generatedAt: "desc" });
+    }
+
+    decisions = await prisma.decision.findMany({
+      where,
+      orderBy,
+    });
+
     console.log("[app._index loader] Found decisions:", decisions.length);
 
     // Get shop stats and currency
@@ -61,9 +104,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     cogsCount,
     minOrdersRequired: MIN_ORDERS_FOR_DECISIONS,
     currencySymbol,
+    filters: {
+      status: statusFilter,
+      type: typeFilter,
+      confidence: confidenceFilter,
+      sort: sortBy,
+    },
     decisions: decisions.map((d) => ({
       id: d.id,
       type: d.type,
+      status: d.status,
       headline: d.headline,
       actionTitle: d.actionTitle,
       reason: d.reason,
@@ -76,12 +126,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Index() {
-  const { decisions, orderCount, lastAnalyzedAt, cogsCount, minOrdersRequired, currencySymbol } =
+  const { decisions, orderCount, lastAnalyzedAt, cogsCount, minOrdersRequired, currencySymbol, filters } =
     useLoaderData<typeof loader>();
   const refreshFetcher = useFetcher();
   const decisionFetcher = useFetcher();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
 
   const isRefreshing = refreshFetcher.state !== "idle";
   const refreshError =
@@ -89,6 +141,7 @@ export default function Index() {
   const search = location.search;
   const refreshAction = `/app/refresh${search}`;
   const settingsUrl = `/app/settings${search}`;
+  const historyUrl = `/app/history${search}`;
   const shouldAutoRefresh = decisions.length === 0 && !lastAnalyzedAt;
   const showCogsWarning = !isRefreshing && cogsCount === 0 && decisions.length > 0;
 
@@ -133,6 +186,12 @@ export default function Index() {
       { method: "post", action: "/app/decision" }
     );
   };
+
+  const handleFilterChange = useCallback((key: string, value: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set(key, value);
+    setSearchParams(params);
+  }, [searchParams, setSearchParams]);
 
   const getDecisionIcon = (type: string) => {
     switch (type) {
@@ -206,6 +265,10 @@ export default function Index() {
       }}
       secondaryActions={[
         {
+          content: "History",
+          url: historyUrl,
+        },
+        {
           content: "Settings",
           url: settingsUrl,
         },
@@ -228,6 +291,88 @@ export default function Index() {
               </Text>
             </Banner>
           )}
+
+          {/* v2: Filters and Sorting */}
+          {!shouldAutoRefresh && (
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between" wrap={false}>
+                  <Text as="h2" variant="headingMd">
+                    Filters & Sort
+                  </Text>
+                  <Button
+                    onClick={() => setShowFilters(!showFilters)}
+                    disclosure={showFilters ? "up" : "down"}
+                  >
+                    {showFilters ? "Hide" : "Show"} filters
+                  </Button>
+                </InlineStack>
+
+                <Collapsible
+                  open={showFilters}
+                  id="filters"
+                  transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
+                >
+                  <BlockStack gap="400">
+                    <InlineStack gap="400" wrap={true}>
+                      <div style={{ minWidth: "200px" }}>
+                        <Select
+                          label="Status"
+                          options={[
+                            { label: "Open", value: "active" },
+                            { label: "Done", value: "done" },
+                            { label: "Ignored", value: "ignored" },
+                            { label: "All", value: "all" },
+                          ]}
+                          value={filters.status}
+                          onChange={(value) => handleFilterChange("status", value)}
+                        />
+                      </div>
+                      <div style={{ minWidth: "200px" }}>
+                        <Select
+                          label="Type"
+                          options={[
+                            { label: "All types", value: "all" },
+                            { label: "Best-seller loss", value: "best_seller_loss" },
+                            { label: "Free shipping trap", value: "free_shipping_trap" },
+                            { label: "Discount-refund hit", value: "discount_refund_hit" },
+                          ]}
+                          value={filters.type}
+                          onChange={(value) => handleFilterChange("type", value)}
+                        />
+                      </div>
+                      <div style={{ minWidth: "200px" }}>
+                        <Select
+                          label="Confidence"
+                          options={[
+                            { label: "All confidence", value: "all" },
+                            { label: "High", value: "high" },
+                            { label: "Medium", value: "medium" },
+                            { label: "Low", value: "low" },
+                          ]}
+                          value={filters.confidence}
+                          onChange={(value) => handleFilterChange("confidence", value)}
+                        />
+                      </div>
+                      <div style={{ minWidth: "200px" }}>
+                        <Select
+                          label="Sort by"
+                          options={[
+                            { label: "Impact (highest first)", value: "impact" },
+                            { label: "Confidence", value: "confidence" },
+                            { label: "Newest first", value: "newest" },
+                          ]}
+                          value={filters.sort}
+                          onChange={(value) => handleFilterChange("sort", value)}
+                        />
+                      </div>
+                    </InlineStack>
+                  </BlockStack>
+                </Collapsible>
+              </BlockStack>
+            </Card>
+          )}
+
           {decisions.length === 0 ? (
             <Card>
               <EmptyState
@@ -281,8 +426,7 @@ export default function Index() {
             <BlockStack gap="400">
               <Banner tone="info">
                 <Text as="p" variant="bodyMd">
-                  Showing the top {decisions.length} profit decision
-                  {decisions.length > 1 ? "s" : ""} you should take right now.
+                  Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}{filters.status !== "active" || filters.type !== "all" || filters.confidence !== "all" ? " (filtered)" : ""}.
                 </Text>
               </Banner>
 
@@ -296,6 +440,8 @@ export default function Index() {
                             {getDecisionIcon(decision.type)} {decision.headline}
                           </Text>
                           {getConfidenceBadge(decision.confidence)}
+                          {decision.status === "done" && <Badge>Done</Badge>}
+                          {decision.status === "ignored" && <Badge tone="info">Ignored</Badge>}
                         </InlineStack>
                         <Text as="p" variant="headingMd">
                           {decision.actionTitle}

@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useSubmit } from "@remix-run/react";
+import { useLoaderData, useFetcher } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -13,7 +13,7 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { getActiveDecisions } from "../services/decision-rules.server";
-import { useState } from "react";
+import { useEffect } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -48,23 +48,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function Index() {
   const { decisions } = useLoaderData<typeof loader>();
-  const submit = useSubmit();
-  const [refreshing, setRefreshing] = useState(false);
+  const refreshFetcher = useFetcher();
+  const decisionFetcher = useFetcher();
+
+  const isRefreshing = refreshFetcher.state !== "idle";
+
+  // Reload page after successful refresh
+  useEffect(() => {
+    if (refreshFetcher.state === "idle" && refreshFetcher.data) {
+      // Refresh completed, reload decisions
+      window.location.reload();
+    }
+  }, [refreshFetcher.state, refreshFetcher.data]);
 
   const handleRefresh = () => {
-    setRefreshing(true);
-    submit({}, { method: "post", action: "/app/refresh" });
+    refreshFetcher.submit({}, { method: "post", action: "/app/refresh" });
   };
 
   const handleMarkDone = (decisionId: string) => {
-    submit(
+    decisionFetcher.submit(
       { decisionId, action: "done" },
       { method: "post", action: "/app/decision" }
     );
   };
 
   const handleMarkIgnored = (decisionId: string) => {
-    submit(
+    decisionFetcher.submit(
       { decisionId, action: "ignore" },
       { method: "post", action: "/app/decision" }
     );
@@ -100,9 +109,9 @@ export default function Index() {
     <Page
       title="Decisions"
       primaryAction={{
-        content: refreshing ? "Refreshing..." : "Refresh Decisions",
+        content: isRefreshing ? "Refreshing..." : "Refresh Decisions",
         onAction: handleRefresh,
-        loading: refreshing,
+        loading: isRefreshing,
       }}
     >
       <Layout>

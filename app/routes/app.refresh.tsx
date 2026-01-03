@@ -36,7 +36,6 @@ function formatUnknownError(error: unknown) {
       const first = (error as any).errors[0];
       if (first?.message) return first.message;
     }
-  }
     try {
       return JSON.stringify(error);
     } catch {

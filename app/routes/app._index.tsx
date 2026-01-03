@@ -16,26 +16,35 @@ import { getActiveDecisions } from "../services/decision-rules.server";
 import { useState } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const shop = session.shop;
+  try {
+    const { session } = await authenticate.admin(request);
+    const shop = session.shop;
 
-  // Just load existing decisions - don't generate on every page load
-  // Use "Refresh Decisions" button to generate new ones
-  const decisions = await getActiveDecisions(shop);
+    console.log("[app._index loader] Loading decisions for shop:", shop);
 
-  return json({
-    shop,
-    decisions: decisions.map((d) => ({
-      id: d.id,
-      type: d.type,
-      headline: d.headline,
-      actionTitle: d.actionTitle,
-      reason: d.reason,
-      impact: d.impact,
-      confidence: d.confidence,
-      generatedAt: d.generatedAt.toISOString(),
-    })),
-  });
+    // Just load existing decisions - don't generate on every page load
+    // Use "Refresh Decisions" button to generate new ones
+    const decisions = await getActiveDecisions(shop);
+
+    console.log("[app._index loader] Found decisions:", decisions.length);
+
+    return json({
+      shop,
+      decisions: decisions.map((d) => ({
+        id: d.id,
+        type: d.type,
+        headline: d.headline,
+        actionTitle: d.actionTitle,
+        reason: d.reason,
+        impact: d.impact,
+        confidence: d.confidence,
+        generatedAt: d.generatedAt.toISOString(),
+      })),
+    });
+  } catch (error) {
+    console.error("[app._index loader] Error:", error);
+    throw error;
+  }
 };
 
 export default function Index() {

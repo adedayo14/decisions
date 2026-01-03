@@ -48,8 +48,8 @@ export interface VariantCostData {
 }
 
 const ORDERS_QUERY = `
-  query getOrders($cursor: String) {
-    orders(first: 250, after: $cursor, query: "created_at:>=-90d") {
+  query getOrders($cursor: String, $query: String) {
+    orders(first: 250, after: $cursor, query: $query) {
       edges {
         node {
           id
@@ -181,10 +181,13 @@ export async function fetchOrdersLast90Days(
   const orders: OrderData[] = [];
   let cursor: string | null = null;
   let hasNextPage = true;
+  const since = new Date();
+  since.setDate(since.getDate() - 90);
+  const query = `created_at:>=${since.toISOString()}`;
 
   while (hasNextPage) {
     const response: Response = await admin.graphql(ORDERS_QUERY, {
-      variables: cursor ? { cursor } : {},
+      variables: cursor ? { cursor, query } : { query },
     });
 
     const data: any = await response.json();

@@ -82,11 +82,16 @@ export async function detectBestSellerLoss(
   }
 
   const productName = worst.productName.split(" - ")[0]; // Remove variant suffix
+  const priceIncreasePerUnit =
+    worst.unitsSold > 0 ? Math.abs(worst.netProfit) / worst.unitsSold : Math.abs(worst.netProfit);
 
   return {
     type: "best_seller_loss",
     headline: `${formatCurrency(monthlyLoss, currencySymbol)}/month at risk`,
-    actionTitle: `Stop pushing ${productName} (or raise price by ${Math.abs(worst.marginPercent).toFixed(0)}%)`,
+    actionTitle: `Stop pushing ${productName} (or raise price by ${formatCurrency(
+      priceIncreasePerUnit,
+      currencySymbol
+    )} per unit)`,
     reason: `Made ${formatCurrency(worst.revenue, currencySymbol)} revenue but lost ${formatCurrency(Math.abs(worst.netProfit), currencySymbol)} after COGS (${formatCurrency(worst.totalCOGS, currencySymbol)}), refunds (${formatCurrency(worst.refundedRevenue, currencySymbol)}), and shipping (${formatCurrency(worst.assumedShipping, currencySymbol)})`,
     impact: monthlyLoss,
     confidence: worst.unitsSold >= 20 ? "high" : worst.unitsSold >= 10 ? "medium" : "low",

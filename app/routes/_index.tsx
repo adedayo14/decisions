@@ -5,11 +5,11 @@ import landingStyles from "../styles/landing.css?url";
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: landingStyles }];
 
 export const meta: MetaFunction = () => [
-  { title: "Decisions for Shopify - Profit moves, not guesses" },
+  { title: "Decisions for Shopify | Fewer alerts. Better profit decisions." },
   {
     name: "description",
     content:
-      "Decisions shows you fewer, better profit decisions — and proves whether they worked.",
+      "Decisions analyses your Shopify orders and shows 1–3 actions only when the numbers justify it. Transparent maths, clear impact, and outcome tracking.",
   },
 ];
 
@@ -20,14 +20,20 @@ export default function Index() {
 
   return (
     <div className="landing">
-      <header className="landing__nav">
-        <div className="landing__brand">
-          <span className="landing__logo">D</span>
-          <span>Decisions</span>
+      <header className="nav">
+        <div className="brand">
+          <span className="brand__logo" aria-hidden="true">
+            D
+          </span>
+          <span className="brand__name">Decisions</span>
         </div>
-        <nav className="landing__actions">
-          <a className="button button--ghost" href="#how-it-works">
+
+        <nav className="nav__actions" aria-label="Primary">
+          <a className="button button--ghost" href="#how">
             How it works
+          </a>
+          <a className="button button--ghost" href="#proof">
+            Proof
           </a>
           <a className="button button--primary" href={appUrl}>
             Open app
@@ -35,156 +41,227 @@ export default function Index() {
         </nav>
       </header>
 
-      <main>
+      <main className="main">
         <section className="hero">
-          <div className="hero__content">
-            <p className="hero__eyebrow">Profit signals for Shopify stores</p>
-            <h1>Decisions that protect your margins.</h1>
-            <p className="hero__lead">
-              Most apps show you more data. Decisions shows you fewer, better decisions — and
-              proves whether they worked.
+          <div className="hero__copy">
+            <p className="eyebrow">Built for restraint</p>
+            <h1>Only interrupt when it matters.</h1>
+
+            <p className="lead">
+              Decisions reads your Shopify orders and shows <strong>1–3</strong> profit decisions
+              only when the numbers justify it. No dashboards, no filler.
             </p>
-            <div className="hero__cta">
+
+            <div className="hero__bullets" role="list">
+              <div className="bullet" role="listitem">
+                <strong>Proof-first</strong>
+                <span>Every decision has the numbers behind it.</span>
+              </div>
+              <div className="bullet" role="listitem">
+                <strong>Quiet by default</strong>
+                <span>If the signal is weak, it stays silent.</span>
+              </div>
+              <div className="bullet" role="listitem">
+                <strong>Outcomes</strong>
+                <span>When you act, it tracks Before → After.</span>
+              </div>
+            </div>
+
+            <div className="ctaRow">
               <a className="button button--primary" href={appUrl}>
-                Launch the app
+                Open app
               </a>
-              <a className="button button--outline" href="#numbers">
-                See the numbers
+              <a className="button button--outline" href="#proof">
+                See an example
               </a>
             </div>
-            <div className="hero__meta">
-              <div>
-                <strong>1-3</strong>
-                <span>Decisions per run</span>
-              </div>
-              <div>
-                <strong>£ impact</strong>
-                <span>Clear monthly stakes</span>
-              </div>
-              <div>
-                <strong>90 days</strong>
-                <span>Order history window</span>
-              </div>
+
+            <div className="trustLine">
+              <span>Default threshold: decisions ≥ £50/month impact.</span>
+              <span>Change it in Settings.</span>
             </div>
           </div>
-          <div className="hero__visual">
-            <div className="card card--headline">
-              <p className="card__label">Decision</p>
-              <h3>£1,240/month at risk</h3>
-              <p className="card__action">Raise price on Classic Hoodie by 12%</p>
+
+          <div className="hero__visual" id="proof">
+            <div className="card card--decision">
+              <div className="card__top">
+                <p className="card__label">Decision</p>
+                <span className="tag tag--high">High confidence</span>
+              </div>
+
+              <h3 className="card__headline">£320/month at risk</h3>
+
+              <p className="card__action">Stop pushing Merino beanie in bundles</p>
+
               <p className="card__reason">
-                Made £6,120 revenue but lost £820 after COGS, refunds, and shipping.
+                Tight margin plus free shipping is dragging net profit below zero in the last 90 days.
               </p>
-              <span className="card__confidence">High confidence</span>
+
+              <div className="whyNow">
+                <span className="whyNow__dot" aria-hidden="true" />
+                <span>This got worse in the last 30 days.</span>
+              </div>
+
+              <div className="outcome">
+                <p className="outcome__label">After you acted</p>
+                <div className="outcome__row">
+                  <span>Profit per order</span>
+                  <strong>−£0.26 → +£0.18</strong>
+                </div>
+                <div className="outcome__row">
+                  <span>Refund rate</span>
+                  <strong>12% → 6%</strong>
+                </div>
+                <div className="outcome__row">
+                  <span>Shipping loss per order</span>
+                  <strong>£1.10 → £0.60</strong>
+                </div>
+                <p className="outcome__verdict">Outcome: improved over 30 days.</p>
+              </div>
             </div>
-            <div className="card card--numbers" id="numbers">
+
+            <div className="card card--numbers">
               <p className="card__label">See numbers</p>
+
               <div className="numbers">
                 <div>
                   <span>Revenue</span>
-                  <strong>£6,120</strong>
+                  <strong>£984</strong>
                 </div>
                 <div>
                   <span>COGS</span>
-                  <strong>£4,210</strong>
+                  <strong>£902</strong>
                 </div>
                 <div>
                   <span>Discounts</span>
-                  <strong>£320</strong>
+                  <strong>£0</strong>
                 </div>
                 <div>
                   <span>Refunds</span>
-                  <strong>£680</strong>
+                  <strong>£0</strong>
                 </div>
                 <div>
-                  <span>Shipping</span>
-                  <strong>£490</strong>
+                  <span>Estimated shipping</span>
+                  <strong>£71.75</strong>
                 </div>
+
                 <div className="numbers__total">
                   <span>Net profit</span>
-                  <strong>−£820</strong>
+                  <strong className="neg">−£10.25</strong>
                 </div>
               </div>
+
+              <p className="numbers__note">
+                Shipping is estimated per order using your assumption. Refunds are counted when processed.
+              </p>
             </div>
           </div>
         </section>
 
-        <section className="section" id="how-it-works">
+        <section className="section" id="how">
           <div className="section__header">
-            <h2>How Decisions works</h2>
-            <p>
-              The app connects to Shopify orders, pulls costs, refunds, and discounts, then keeps
-              only the strongest signals.
-            </p>
+            <h2>How it works</h2>
+            <p>Simple flow. Clear outputs. Minimal noise.</p>
           </div>
+
           <div className="steps">
             <div className="step">
-              <span>01</span>
-              <h3>Pull order history</h3>
-              <p>We analyze the last 90 days with refunds, shipping, and discounts included.</p>
+              <span className="step__num">01</span>
+              <h3>Read orders</h3>
+              <p>Analyses recent orders, discounts, refunds, and shipping behaviour.</p>
             </div>
+
             <div className="step">
-              <span>02</span>
-              <h3>Match product costs</h3>
-              <p>COGS from Shopify (or CSV upload) powers accurate margin math.</p>
+              <span className="step__num">02</span>
+              <h3>Match costs</h3>
+              <p>Uses Shopify costs and your overrides (CSV or manual) to make margin maths usable.</p>
             </div>
+
             <div className="step">
-              <span>03</span>
-              <h3>Surface only signal</h3>
-              <p>We show 1-3 decisions with confidence levels and a clear impact number.</p>
+              <span className="step__num">03</span>
+              <h3>Show only signal</h3>
+              <p>Surfaces 1–3 decisions when the impact crosses your threshold.</p>
+            </div>
+
+            <div className="step">
+              <span className="step__num">04</span>
+              <h3>Prove outcomes</h3>
+              <p>When you mark a decision as done, Decisions tracks Before → After without claiming causality.</p>
             </div>
           </div>
         </section>
 
         <section className="section section--contrast">
           <div className="section__header">
-            <h2>Built for restraint</h2>
-            <p>When the data is thin, Decisions stays quiet instead of forcing weak advice.</p>
+            <h2>What makes it different</h2>
+            <p>Most apps add noise. Decisions reduces it.</p>
           </div>
-          <div className="pill-grid">
-            <div className="pill">Order thresholds required</div>
-            <div className="pill">No filler decisions</div>
-            <div className="pill">Confidence labels</div>
-            <div className="pill">Transparent numbers</div>
+
+          <div className="pillGrid">
+            <div className="pill">1–3 decisions per run</div>
+            <div className="pill">Minimum impact threshold</div>
+            <div className="pill">Proof-first numbers</div>
+            <div className="pill">Outcome tracking</div>
+            <div className="pill">No filler advice</div>
           </div>
         </section>
 
         <section className="section section--split">
           <div>
-            <h2>Shopify-native, fast, and clear</h2>
+            <h2>Made for busy merchants</h2>
             <p>
-              Decisions feels like part of the Shopify Admin, with a focused dashboard, quick
-              refresh, and easy settings for shipping assumptions.
+              Decisions is designed for the way merchants actually work: quick checks, clear stakes, and a calm UI
+              that does not demand attention.
             </p>
-            <div className="badge-row">
-              <span>Embedded Admin app</span>
+
+            <div className="badgeRow">
+              <span>Embedded in Shopify Admin</span>
               <span>Polaris UI</span>
-              <span>Real-time refresh</span>
+              <span>Transparent assumptions</span>
+            </div>
+
+            <div className="micro">
+              <h3>Decision types</h3>
+              <ul>
+                <li>Best-seller loss</li>
+                <li>Free-shipping trap</li>
+                <li>Discount–refund hit</li>
+              </ul>
+              <p className="micro__note">
+                Each decision includes impact, confidence, and the six-metric breakdown.
+              </p>
             </div>
           </div>
+
           <div className="surface">
-            <h3>Decision types</h3>
-            <ul>
-              <li>Best-seller loss</li>
-              <li>Free-shipping trap</li>
-              <li>Discount-refund hit</li>
-            </ul>
-            <p>Each card shows action, reason, confidence, and the six-metric breakdown.</p>
+            <h3 className="surface__title">Quiet by default</h3>
+            <p className="surface__lead">
+              If the data is thin, Decisions says so. It does not force advice to look busy.
+            </p>
+
+            <div className="surface__example">
+              <p className="surface__kicker">Example empty state copy</p>
+              <p className="surface__quote">
+                “We analysed 39 orders. No decisions meet your threshold right now. Showing only decisions ≥ £50/month
+                (change in Settings).”
+              </p>
+            </div>
           </div>
         </section>
 
         <section className="cta">
-          <h2>Ready to protect your margins?</h2>
-          <p>Launch Decisions from Shopify and get your first analysis in minutes.</p>
+          <h2>Ready for fewer alerts and better calls?</h2>
+          <p>Open the app and run your first analysis.</p>
           <a className="button button--primary" href={appUrl}>
             Open app
           </a>
+          <p className="cta__fine">No promises. Just numbers you can verify.</p>
         </section>
       </main>
 
-      <footer className="landing__footer">
+      <footer className="footer">
         <span>Decisions for Shopify</span>
-        <span>Built for clear profit moves</span>
+        <span>Fewer alerts. Better profit decisions.</span>
       </footer>
     </div>
   );

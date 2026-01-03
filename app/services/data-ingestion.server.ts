@@ -96,20 +96,30 @@ export async function ingestShopifyData(
     }
   }
 
-  // Fetch fresh data
-  const [orders, variantCosts] = await Promise.all([
-    getOrderData(shop, admin, forceRefresh),
-    getVariantCostData(shop, admin, forceRefresh),
-  ]);
+  // Fetch fresh data - with graceful fallback for missing scopes
+  const orders = await getOrderData(shop, admin, forceRefresh);
 
-  // Sync COGS from Shopify
-  const cogsResult = await syncCOGSFromShopify(shop, variantCosts);
+  let variantCosts: VariantCostData[] = [];
+  let cogsImported = 0;
+  let cogsSkipped = 0;
+
+  try {
+    variantCosts = await getVariantCostData(shop, admin, forceRefresh);
+
+    // Sync COGS from Shopify
+    const cogsResult = await syncCOGSFromShopify(shop, variantCosts);
+    cogsImported = cogsResult.imported;
+    cogsSkipped = cogsResult.skipped;
+  } catch (error) {
+    console.warn("[data-ingestion] Could not fetch variant costs - missing read_products scope?", error);
+    // Continue without variant cost data - decisions will use default/manual COGS
+  }
 
   return {
     ordersCount: orders.length,
     variantsCount: variantCosts.length,
-    cogsImported: cogsResult.imported,
-    cogsSkipped: cogsResult.skipped,
+    cogsImported,
+    cogsSkipped,
     cached: false,
   };
 }

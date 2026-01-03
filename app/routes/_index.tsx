@@ -1,4 +1,5 @@
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
+import { useLocation } from "@remix-run/react";
 import landingStyles from "../styles/landing.css?url";
 
 export const links: LinksFunction = () => [{ rel: "stylesheet", href: landingStyles }];
@@ -13,6 +14,10 @@ export const meta: MetaFunction = () => [
 ];
 
 export default function Index() {
+  const location = useLocation();
+  const search = location.search;
+  const appUrl = `/app${search}`;
+
   return (
     <div className="landing">
       <header className="landing__nav">
@@ -24,8 +29,8 @@ export default function Index() {
           <a className="button button--ghost" href="#how-it-works">
             How it works
           </a>
-          <a className="button button--primary" href="/app">
-            Open in Shopify
+          <a className="button button--primary" href={appUrl}>
+            Open app
           </a>
         </nav>
       </header>
@@ -40,7 +45,7 @@ export default function Index() {
               impact, confidence, and the exact numbers behind each call.
             </p>
             <div className="hero__cta">
-              <a className="button button--primary" href="/app">
+              <a className="button button--primary" href={appUrl}>
                 Launch the app
               </a>
               <a className="button button--outline" href="#numbers">
@@ -171,8 +176,8 @@ export default function Index() {
         <section className="cta">
           <h2>Ready to protect your margins?</h2>
           <p>Launch Decisions from Shopify and get your first analysis in minutes.</p>
-          <a className="button button--primary" href="/app">
-            Open in Shopify
+          <a className="button button--primary" href={appUrl}>
+            Open app
           </a>
         </section>
       </main>

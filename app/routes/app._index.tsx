@@ -353,6 +353,16 @@ export default function Index() {
     return `${currencySymbol}${Math.abs(value).toFixed(2)}`;
   };
 
+  const getDecisionStatusLine = (decision: any) => {
+    const parts: string[] = [];
+    if (decision.status === "done") parts.push("Done");
+    if (decision.status === "ignored") parts.push("Ignored");
+    if (decision.outcome?.status === "improved") parts.push("Outcome: Improved");
+    if (decision.outcome?.status === "worsened") parts.push("Outcome: Worsened");
+    if (decision.outcome?.status === "no_change") parts.push("Outcome: No clear change");
+    return parts.join(" · ");
+  };
+
   const getNumbersTable = (decision: any) => {
     const data = decision.dataJson || {};
     const netProfit = Number(data.netProfit ?? 0);
@@ -395,6 +405,12 @@ export default function Index() {
           headings={["Metric", "Last 90 days"]}
           rows={rows}
         />
+        {decision.dataJson?.confidenceHistoryRate !== null &&
+          decision.dataJson?.confidenceHistoryTotal >= 5 && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              Decisions like this have improved outcomes ~{Math.round(decision.dataJson.confidenceHistoryRate * 100)}% of the time for your store.
+            </Text>
+          )}
         <Text as="p" variant="bodySm" tone="subdued">
           Note: Refunds are counted when processed, not when originally ordered. Shipping costs are estimated per order.
         </Text>
@@ -423,35 +439,30 @@ export default function Index() {
     >
       <Layout>
         <Layout.Section>
-          {refreshError && (
-            <Banner tone="critical">
-              <Text as="p" variant="bodyMd">
-                Refresh failed: {refreshError}
+          <BlockStack gap="200">
+            {refreshError && (
+              <Banner tone="critical">
+                <Text as="p" variant="bodyMd">
+                  Refresh failed: {refreshError}
+                </Text>
+              </Banner>
+            )}
+            {(showFirstRunNote || doneDecisionsCount > 0) && (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {showFirstRunNote
+                  ? "We only show decisions when the numbers justify interrupting you."
+                  : `You acted on ${doneDecisionsCount} decisions, ${improvedDecisionsCount} improved.`}
               </Text>
-            </Banner>
-          )}
-          {showFirstRunNote && (
-            <Banner tone="info">
-              <Text as="p" variant="bodyMd">
-                We only show decisions when the numbers justify interrupting you.
-              </Text>
-            </Banner>
-          )}
-          {doneDecisionsCount > 0 && (
-            <Banner tone="info">
-              <Text as="p" variant="bodyMd">
-                You acted on {doneDecisionsCount} decisions, {improvedDecisionsCount} improved.
-              </Text>
-            </Banner>
-          )}
-          {showCogsWarning && (
-            <Banner tone="warning">
-              <Text as="p" variant="bodyMd">
-                No product costs found. Add costs in Shopify or upload a CSV to unlock profit-based
-                decisions.
-              </Text>
-            </Banner>
-          )}
+            )}
+            {showCogsWarning && (
+              <Banner tone="warning">
+                <Text as="p" variant="bodyMd">
+                  No product costs found. Add costs in Shopify or upload a CSV to unlock profit-based
+                  decisions.
+                </Text>
+              </Banner>
+            )}
+          </BlockStack>
 
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
@@ -459,7 +470,7 @@ export default function Index() {
               <BlockStack gap="400">
                 <InlineStack align="space-between" wrap={false}>
                   <Text as="h2" variant="headingMd">
-                    Filters & Sort
+                    Filters
                   </Text>
                   <Button
                     onClick={() => setShowFilters(!showFilters)}
@@ -590,11 +601,9 @@ export default function Index() {
             </Card>
           ) : (
             <BlockStack gap="400">
-              <Banner tone="info">
-                <Text as="p" variant="bodyMd">
-                  Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}{filters.status !== "active" || filters.type !== "all" || filters.confidence !== "all" ? " (filtered)" : ""}. Minimum impact filter: {currencySymbol}{minImpactThreshold.toFixed(0)}/month.
-                </Text>
-              </Banner>
+              <Text as="p" variant="bodySm" tone="subdued">
+                Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}{filters.status !== "active" || filters.type !== "all" || filters.confidence !== "all" ? " (filtered)" : ""}. Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month.
+              </Text>
 
               {decisions.map((decision) => (
                 <Card key={decision.id}>
@@ -606,18 +615,12 @@ export default function Index() {
                             {getDecisionIcon(decision.type)} {decision.headline}
                           </Text>
                           {getConfidenceBadge(decision.confidence)}
-                          {decision.status === "done" && <Badge>Done</Badge>}
-                          {decision.status === "ignored" && <Badge tone="info">Ignored</Badge>}
-                          {decision.outcome?.status === "improved" && (
-                            <Badge tone="success">Improved</Badge>
-                          )}
-                          {decision.outcome?.status === "worsened" && (
-                            <Badge tone="critical">Worsened</Badge>
-                          )}
-                          {decision.outcome?.status === "no_change" && (
-                            <Badge tone="attention">No clear change</Badge>
-                          )}
                         </InlineStack>
+                        {getDecisionStatusLine(decision) && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {getDecisionStatusLine(decision)}
+                          </Text>
+                        )}
                         <Text as="p" variant="headingMd">
                           {decision.actionTitle}
                         </Text>
@@ -629,31 +632,20 @@ export default function Index() {
                             {decision.dataJson.whyNowMessage}
                           </Text>
                         )}
-                        {decision.dataJson?.runRateContext && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {decision.dataJson.runRateContext}
-                          </Text>
-                        )}
                         {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
                           <Text as="p" variant="bodySm" tone="subdued">
                             You ignored this earlier. The impact has grown from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to {formatCurrency(decision.impact)}.
                           </Text>
                         )}
-                        {decision.dataJson?.confidenceHistoryRate !== null &&
-                          decision.dataJson?.confidenceHistoryTotal >= 5 && (
+                        {decision.outcome?.storyLine && decision.outcome?.message && (
+                          <BlockStack gap="100">
                             <Text as="p" variant="bodySm" tone="subdued">
-                              Decisions like this have improved outcomes ~{Math.round(decision.dataJson.confidenceHistoryRate * 100)}% of the time for your store.
+                              {decision.outcome.storyLine}
                             </Text>
-                          )}
-                        {decision.outcome?.storyLine && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {decision.outcome.storyLine}
-                          </Text>
-                        )}
-                        {decision.outcome?.message && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {decision.outcome.message}
-                          </Text>
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              {decision.outcome.message}
+                            </Text>
+                          </BlockStack>
                         )}
                       </BlockStack>
                     </InlineStack>

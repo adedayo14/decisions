@@ -57,6 +57,18 @@ model COGS {
   @@index([shop, source])
 }
 
+// Decision run tracking (v2: archive/history)
+model DecisionRun {
+  id          String   @id @default(cuid())
+  shop        String
+  generatedAt DateTime @default(now())
+  orderCount  Int      // Number of orders analyzed
+  windowDays  Int      @default(90) // Analysis window in days
+  createdAt   DateTime @default(now())
+
+  @@index([shop, generatedAt])
+}
+
 // Decision tracking
 model Decision {
   id          String   @id @default(cuid())
@@ -74,6 +86,10 @@ model Decision {
   // Supporting data for "See numbers" modal
   dataJson    Json     // { revenue, cogs, discounts, refunds, shipping, netProfit }
 
+  // v2: Link to decision run and stable key for tracking
+  runId       String?  // Link to DecisionRun
+  decisionKey String   @default("") // Stable key for tracking repeats (e.g., "best_seller_loss:variant_12345")
+
   // Metadata
   generatedAt DateTime @default(now())
   completedAt DateTime?
@@ -82,6 +98,8 @@ model Decision {
   @@index([shop, status])
   @@index([shop, generatedAt])
   @@index([shop, type, status])
+  @@index([shop, runId])
+  @@index([shop, decisionKey])
 }
 
 // Cache for aggregated Shopify data (avoid re-fetching constantly)

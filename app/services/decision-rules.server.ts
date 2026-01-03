@@ -235,7 +235,23 @@ export async function detectDiscountRefundHit(
 }
 
 /**
+ * Generate decision key for tracking across runs
+ */
+function generateDecisionKey(decision: DecisionData): string {
+  const variantId = decision.dataJson.variantId;
+  if (variantId) {
+    return `${decision.type}:${variantId}`;
+  }
+  // For free shipping trap, use threshold
+  if (decision.type === "free_shipping_trap") {
+    return `${decision.type}:${decision.dataJson.currentThreshold}`;
+  }
+  return `${decision.type}:unknown`;
+}
+
+/**
  * Generate all decisions and save to database
+ * v2: Creates DecisionRun record and persists ALL decisions per run
  */
 export async function generateDecisions(
   shop: string,
@@ -254,7 +270,16 @@ export async function generateDecisions(
     },
   });
 
-  // Clear old active decisions
+  // v2: Create decision run record
+  const decisionRun = await prisma.decisionRun.create({
+    data: {
+      shop,
+      orderCount: orders.length,
+      windowDays: 90,
+    },
+  });
+
+  // Clear old active decisions (mark them as done)
   await prisma.decision.updateMany({
     where: {
       shop,
@@ -277,35 +302,42 @@ export async function generateDecisions(
     detectDiscountRefundHit(shop, orders, currencySymbol),
   ]);
 
-  const decisions: DecisionData[] = [
+  const allDecisions: DecisionData[] = [
     bestSellerLoss,
     freeShippingTrap,
     discountRefundHit,
   ].filter((d): d is DecisionData => d !== null);
 
-  // Sort by impact (highest first) and take top 3
-  const topDecisions = decisions.sort((a, b) => b.impact - a.impact).slice(0, 3);
+  // Sort by impact (highest first)
+  const sortedDecisions = allDecisions.sort((a, b) => b.impact - a.impact);
 
-  // Save to database
-  for (const decision of topDecisions) {
+  // v2: Save ALL decisions to database (not just top 3)
+  // Only top 3 will have status "active", rest are "done"
+  for (let i = 0; i < sortedDecisions.length; i++) {
+    const decision = sortedDecisions[i];
+    const isTopThree = i < 3;
+
     await prisma.decision.create({
       data: {
         shop,
         type: decision.type,
-        status: "active",
+        status: isTopThree ? "active" : "done",
         headline: decision.headline,
         actionTitle: decision.actionTitle,
         reason: decision.reason,
         impact: decision.impact,
         confidence: decision.confidence,
         dataJson: decision.dataJson,
+        runId: decisionRun.id,
+        decisionKey: generateDecisionKey(decision),
+        completedAt: isTopThree ? null : new Date(),
       },
     });
   }
 
   return {
-    created: topDecisions.length,
-    decisions: topDecisions,
+    created: sortedDecisions.length,
+    decisions: sortedDecisions.slice(0, 3), // Return top 3 for UI
   };
 }
 

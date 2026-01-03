@@ -1,11 +1,11 @@
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration
 
 # IMPORTANT: Replace client_id with your actual value from Shopify Partners Dashboard
-client_id = "fd8893fb352c5758c7344f6ca185b784"
+client_id = "3b6a665f75b3b3f989db7a6f512a3f32"
 name = "Decisions"
 application_url = "https://decisions-seven.vercel.app"
 embedded = true
-handle = "decisions"
+handle = "decisions-test-lab"
 
 [build]
 automatically_update_urls_on_dev = false

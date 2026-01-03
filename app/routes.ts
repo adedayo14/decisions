@@ -14,6 +14,7 @@ export default [
     route("app/settings", "routes/app.settings.tsx"),
     route("app/decision", "routes/app.decision.tsx"),
     route("app/cogs", "routes/app.cogs.tsx"),
+    route("app/costs", "routes/app.costs.tsx"),
     route("app/refresh", "routes/app.refresh.tsx"),
   ]),
 

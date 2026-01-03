@@ -8,6 +8,7 @@ import {
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 import { logger } from "~/utils/logger.server";
+import { initializeShopSettings } from "./services/shop-settings.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -20,18 +21,11 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   isEmbeddedApp: true,
   hooks: {
-    afterAuth: async ({ session }) => {
-      // Create or update Shop record
-      await prisma.shop.upsert({
-        where: { shop: session.shop },
-        update: { updatedAt: new Date() },
-        create: { shop: session.shop }
-      });
+    afterAuth: async ({ session, admin }) => {
+      // Initialize shop settings (including currency)
+      await initializeShopSettings(session.shop, admin);
 
       logger.info("App installed successfully", { shop: session.shop });
-
-      // Add your custom post-install logic here
-      // Example: Initialize default settings, trigger data sync, etc.
     },
   },
   future: {

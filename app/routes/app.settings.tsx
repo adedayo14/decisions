@@ -22,11 +22,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     where: { shop },
     select: {
       assumedShippingCost: true,
+      currencySymbol: true,
+      currency: true,
     },
   });
 
   return json({
     assumedShippingCost: shopSettings?.assumedShippingCost ?? 3.50,
+    currencySymbol: shopSettings?.currencySymbol ?? "£",
+    currency: shopSettings?.currency ?? "GBP",
   });
 };
 
@@ -50,7 +54,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { assumedShippingCost } = useLoaderData<typeof loader>();
+  const { assumedShippingCost, currencySymbol, currency } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
 
   const [shippingCost, setShippingCost] = useState(assumedShippingCost.toString());
@@ -95,12 +99,18 @@ export default function Settings() {
                   These settings help calculate profit for decisions that involve shipping costs.
                 </Text>
 
+                <Banner tone="info">
+                  <Text as="p" variant="bodyMd">
+                    Store currency: <strong>{currency}</strong> ({currencySymbol})
+                  </Text>
+                </Banner>
+
                 <TextField
                   label="Assumed shipping cost per order"
                   type="number"
                   value={shippingCost}
                   onChange={setShippingCost}
-                  prefix="£"
+                  prefix={currencySymbol}
                   helpText="Average cost you pay to ship an order. Used when calculating Best-Seller Loss and Free-Shipping Trap decisions."
                   autoComplete="off"
                 />

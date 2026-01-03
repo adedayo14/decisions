@@ -8,6 +8,7 @@ import {
   getHighDiscountVariants,
 } from "./profit-calculator.server";
 import { prisma } from "../db.server";
+import { getShopSettings } from "./shop-settings.server";
 
 export interface DecisionData {
   type: "best_seller_loss" | "free_shipping_trap" | "discount_refund_hit";
@@ -28,12 +29,20 @@ export interface DecisionData {
 }
 
 /**
+ * Format currency with shop's currency symbol
+ */
+function formatCurrency(amount: number, currencySymbol: string): string {
+  return `${currencySymbol}${Math.abs(amount).toFixed(2)}`;
+}
+
+/**
  * Rule 1: Best-Seller Loss
  * Identify popular products that are actually losing money
  */
 export async function detectBestSellerLoss(
   shop: string,
-  orders: OrderData[]
+  orders: OrderData[],
+  currencySymbol: string
 ): Promise<DecisionData | null> {
   const variantMetrics = await calculateVariantProfits(shop, orders);
   const topSellers = getTopSellingVariants(variantMetrics, 20);
@@ -59,9 +68,9 @@ export async function detectBestSellerLoss(
 
   return {
     type: "best_seller_loss",
-    headline: `£${monthlyLoss.toFixed(0)}/month at risk`,
+    headline: `${formatCurrency(monthlyLoss, currencySymbol)}/month at risk`,
     actionTitle: `Stop pushing ${productName} (or raise price by ${Math.abs(worst.marginPercent).toFixed(0)}%)`,
-    reason: `Made £${worst.revenue.toFixed(2)} revenue but lost £${Math.abs(worst.netProfit).toFixed(2)} after COGS (£${worst.totalCOGS.toFixed(2)}), refunds (£${worst.refundedRevenue.toFixed(2)}), and shipping (£${worst.assumedShipping.toFixed(2)})`,
+    reason: `Made ${formatCurrency(worst.revenue, currencySymbol)} revenue but lost ${formatCurrency(Math.abs(worst.netProfit), currencySymbol)} after COGS (${formatCurrency(worst.totalCOGS, currencySymbol)}), refunds (${formatCurrency(worst.refundedRevenue, currencySymbol)}), and shipping (${formatCurrency(worst.assumedShipping, currencySymbol)})`,
     impact: monthlyLoss,
     confidence: worst.unitsSold >= 20 ? "high" : worst.unitsSold >= 10 ? "medium" : "low",
     dataJson: {
@@ -86,7 +95,8 @@ export async function detectBestSellerLoss(
  */
 export async function detectFreeShippingTrap(
   shop: string,
-  orders: OrderData[]
+  orders: OrderData[],
+  currencySymbol: string
 ): Promise<DecisionData | null> {
   // Get shop settings
   const shopSettings = await prisma.shop.findUnique({
@@ -137,9 +147,9 @@ export async function detectFreeShippingTrap(
 
   return {
     type: "free_shipping_trap",
-    headline: `£${monthlySavings.toFixed(0)}/month opportunity`,
-    actionTitle: `Lower free shipping to £${bestThreshold - 5} (from assumed £${bestThreshold})`,
-    reason: `${bestClusterCount} orders (${clusterRate.toFixed(0)}%) are £${avgGap.toFixed(2)} below free shipping`,
+    headline: `${formatCurrency(monthlySavings, currencySymbol)}/month opportunity`,
+    actionTitle: `Lower free shipping to ${currencySymbol}${(bestThreshold - 5).toFixed(0)} (from assumed ${currencySymbol}${bestThreshold})`,
+    reason: `${bestClusterCount} orders (${clusterRate.toFixed(0)}%) are ${formatCurrency(avgGap, currencySymbol)} below free shipping`,
     impact: monthlySavings,
     confidence: clusterRate >= 25 ? "high" : clusterRate >= 18 ? "medium" : "low",
     dataJson: {
@@ -165,7 +175,8 @@ export async function detectFreeShippingTrap(
  */
 export async function detectDiscountRefundHit(
   shop: string,
-  orders: OrderData[]
+  orders: OrderData[],
+  currencySymbol: string
 ): Promise<DecisionData | null> {
   const variantMetrics = await calculateVariantProfits(shop, orders);
 
@@ -191,9 +202,9 @@ export async function detectDiscountRefundHit(
 
   return {
     type: "discount_refund_hit",
-    headline: `£${monthlyLoss.toFixed(0)}/month at risk`,
+    headline: `${formatCurrency(monthlyLoss, currencySymbol)}/month at risk`,
     actionTitle: `Stop discounting ${productName} (${worst.discountRate.toFixed(0)}% off + ${worst.refundRate.toFixed(0)}% refunded)`,
-    reason: `Discounted ${worst.discountRate.toFixed(0)}% on average, then ${worst.refundRate.toFixed(0)}% were refunded - lost £${totalLoss.toFixed(2)} total on ${worst.unitsSold} units (discounts: £${worst.totalDiscounts.toFixed(2)}, refunds: £${worst.refundedRevenue.toFixed(2)})`,
+    reason: `Discounted ${worst.discountRate.toFixed(0)}% on average, then ${worst.refundRate.toFixed(0)}% were refunded - lost ${formatCurrency(totalLoss, currencySymbol)} total on ${worst.unitsSold} units (discounts: ${formatCurrency(worst.totalDiscounts, currencySymbol)}, refunds: ${formatCurrency(worst.refundedRevenue, currencySymbol)})`,
     impact: monthlyLoss,
     confidence: worst.unitsSold >= 20 ? "high" : worst.unitsSold >= 15 ? "medium" : "low",
     dataJson: {
@@ -222,15 +233,14 @@ export async function generateDecisions(
   shop: string,
   orders: OrderData[]
 ): Promise<{ created: number; decisions: DecisionData[] }> {
+  // Get shop settings (including currency)
+  const shopSettings = await getShopSettings(shop);
+  const currencySymbol = shopSettings.currencySymbol;
+
   // Update shop stats
-  await prisma.shop.upsert({
+  await prisma.shop.update({
     where: { shop },
-    update: {
-      lastOrderCount: orders.length,
-      lastAnalyzedAt: new Date(),
-    },
-    create: {
-      shop,
+    data: {
       lastOrderCount: orders.length,
       lastAnalyzedAt: new Date(),
     },
@@ -248,11 +258,11 @@ export async function generateDecisions(
     },
   });
 
-  // Run all detection rules
+  // Run all detection rules with currency symbol
   const [bestSellerLoss, freeShippingTrap, discountRefundHit] = await Promise.all([
-    detectBestSellerLoss(shop, orders),
-    detectFreeShippingTrap(shop, orders),
-    detectDiscountRefundHit(shop, orders),
+    detectBestSellerLoss(shop, orders, currencySymbol),
+    detectFreeShippingTrap(shop, orders, currencySymbol),
+    detectDiscountRefundHit(shop, orders, currencySymbol),
   ]);
 
   const decisions: DecisionData[] = [

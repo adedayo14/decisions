@@ -28,19 +28,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let decisions: Awaited<ReturnType<typeof getActiveDecisions>> = [];
   let orderCount = 0;
   let lastAnalyzedAt: string | null = null;
+  let currencySymbol = "£"; // Default fallback
 
   try {
     decisions = await getActiveDecisions(shop);
     console.log("[app._index loader] Found decisions:", decisions.length);
 
-    // Get shop stats
+    // Get shop stats and currency
     const shopData = await prisma.shop.findUnique({
       where: { shop },
-      select: { lastOrderCount: true, lastAnalyzedAt: true },
+      select: { lastOrderCount: true, lastAnalyzedAt: true, currencySymbol: true },
     });
 
     orderCount = shopData?.lastOrderCount ?? 0;
     lastAnalyzedAt = shopData?.lastAnalyzedAt?.toISOString() ?? null;
+    currencySymbol = shopData?.currencySymbol ?? "£";
   } catch (error) {
     console.error("[app._index loader] Error loading decisions (non-fatal):", error);
     // Continue with empty decisions - user can try "Refresh" button
@@ -50,6 +52,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop,
     orderCount,
     lastAnalyzedAt,
+    currencySymbol,
     decisions: decisions.map((d) => ({
       id: d.id,
       type: d.type,
@@ -65,7 +68,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Index() {
-  const { decisions, orderCount, lastAnalyzedAt } = useLoaderData<typeof loader>();
+  const { decisions, orderCount, currencySymbol } = useLoaderData<typeof loader>();
   const refreshFetcher = useFetcher();
   const decisionFetcher = useFetcher();
   const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
@@ -141,7 +144,7 @@ export default function Index() {
   };
 
   const formatCurrency = (value: number) => {
-    return `£${Math.abs(value).toFixed(2)}`;
+    return `${currencySymbol}${Math.abs(value).toFixed(2)}`;
   };
 
   const getNumbersTable = (decision: any) => {

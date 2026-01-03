@@ -57,13 +57,11 @@ const ENV_VARS: EnvVar[] = [
     errorMessage: 'Must be a valid PostgreSQL connection string'
   },
 
-  // Session/Security (REQUIRED)
+  // Session/Security (OPTIONAL - we use Prisma session storage, not cookie sessions)
   {
     key: 'SESSION_SECRET',
-    required: true,
-    description: 'Secret key for session encryption',
-    validation: (v) => v.length >= 32,
-    errorMessage: 'Must be at least 32 characters long for security'
+    required: false,
+    description: 'Secret key for session encryption (not needed with Prisma storage)',
   },
 
   // Optional Services
@@ -242,7 +240,7 @@ export const env = {
   get databaseUrl() { return getRequiredEnv('DATABASE_URL'); },
 
   // Security
-  get sessionSecret() { return getRequiredEnv('SESSION_SECRET'); },
+  get sessionSecret() { return getOptionalEnv('SESSION_SECRET'); },
   get cronSecret() { return getOptionalEnv('CRON_SECRET'); },
   get adminSecret() { return getOptionalEnv('ADMIN_SECRET'); },
   get migrationSecret() { return getOptionalEnv('MIGRATION_SECRET'); },

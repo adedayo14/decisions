@@ -222,8 +222,64 @@ async function getVariantPrices(
   return priceMap;
 }
 
+async function getVariantDetails(
+  admin: AdminApiContext,
+  variantIds: string[]
+): Promise<Map<string, { productName: string; sku: string; price: number }>> {
+  const detailsMap = new Map<string, { productName: string; sku: string; price: number }>();
+
+  if (variantIds.length === 0) {
+    return detailsMap;
+  }
+
+  const batchSize = 50;
+  for (let i = 0; i < variantIds.length; i += batchSize) {
+    const batch = variantIds.slice(i, i + batchSize);
+    const gids = batch.map((id) =>
+      id.startsWith("gid://") ? id : `gid://shopify/ProductVariant/${id}`
+    );
+
+    const query = `
+      query getVariantDetails($ids: [ID!]!) {
+        nodes(ids: $ids) {
+          ... on ProductVariant {
+            id
+            sku
+            price
+            product {
+              title
+            }
+          }
+        }
+      }
+    `;
+
+    try {
+      const response = await admin.graphql(query, { variables: { ids: gids } });
+      const data = await response.json();
+
+      if (data.data?.nodes) {
+        for (const node of data.data.nodes) {
+          if (node?.id) {
+            const numericId = node.id.split("/").pop();
+            detailsMap.set(numericId, {
+              productName: node.product?.title || "Unknown Product",
+              sku: node.sku || "",
+              price: parseFloat(node.price || "0"),
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching variant details:", error);
+    }
+  }
+
+  return detailsMap;
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const shop = session.shop;
 
   const cogsBySource = await prisma.cOGS.groupBy({
@@ -240,10 +296,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shopifyCount = bySource.shopify ?? 0;
   const overrideCount = (bySource.csv ?? 0) + (bySource.manual ?? 0);
 
+  // Fetch all COGS with product details
+  const allCogs = await prisma.cOGS.findMany({
+    where: { shop },
+    orderBy: { updatedAt: "desc" },
+    take: 100, // Limit to recent 100
+  });
+
+  // Fetch variant details from Shopify
+  const variantDetails = await getVariantDetails(admin, allCogs.map(c => c.variantId));
+
+  const costsWithDetails = allCogs.map(cog => ({
+    variantId: cog.variantId,
+    productName: variantDetails.get(cog.variantId)?.productName || "Unknown",
+    sku: variantDetails.get(cog.variantId)?.sku || "",
+    cost: cog.costGbp,
+    source: cog.source,
+    price: variantDetails.get(cog.variantId)?.price || 0,
+  }));
+
   return json({
     shopifyCount,
     overrideCount,
     totalCount: shopifyCount + overrideCount,
+    costs: costsWithDetails,
   });
 };
 
@@ -376,7 +452,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Costs() {
-  const { shopifyCount, overrideCount, totalCount } = useLoaderData<typeof loader>();
+  const { shopifyCount, overrideCount, totalCount, costs } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const location = useLocation();
 
@@ -582,6 +658,34 @@ export default function Costs() {
                 )}
               </BlockStack>
             </Card>
+
+            {costs.length > 0 && (
+              <Card>
+                <BlockStack gap="400">
+                  <Text as="h2" variant="headingMd">
+                    Product Costs ({costs.length})
+                  </Text>
+
+                  <DataTable
+                    columnContentTypes={["text", "text", "numeric", "text", "numeric"]}
+                    headings={["Product", "SKU", "Cost", "Source", "Price"]}
+                    rows={costs.map((cost) => [
+                      cost.productName,
+                      cost.sku || "—",
+                      `£${cost.cost.toFixed(2)}`,
+                      cost.source === "shopify" ? "Shopify" : cost.source === "csv" ? "CSV" : "Manual",
+                      `£${cost.price.toFixed(2)}`,
+                    ])}
+                  />
+
+                  {costs.length >= 100 && (
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Showing 100 most recent costs
+                    </Text>
+                  )}
+                </BlockStack>
+              </Card>
+            )}
           </BlockStack>
         </Layout.Section>
       </Layout>

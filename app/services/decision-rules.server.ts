@@ -33,6 +33,7 @@ export interface DecisionData {
 
 const MIN_ORDERS_FOR_DECISIONS = 30;
 const MIN_BEST_SELLER_UNITS = 10;
+const MIN_MONTHLY_IMPACT = 50; // Minimum £50/month impact to show decision
 
 /**
  * Format currency with shop's currency symbol
@@ -74,6 +75,12 @@ export async function detectBestSellerLoss(
   }
 
   const monthlyLoss = Math.abs(worst.netProfit) * (30 / 90); // Project to monthly
+
+  // v2: Require minimum monthly impact to be actionable
+  if (monthlyLoss < MIN_MONTHLY_IMPACT) {
+    return null;
+  }
+
   const productName = worst.productName.split(" - ")[0]; // Remove variant suffix
 
   return {

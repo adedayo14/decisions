@@ -20,6 +20,7 @@ import { authenticate } from "../shopify.server";
 import { getActiveDecisions } from "../services/decision-rules.server";
 import { prisma } from "../db.server";
 import { useEffect, useState, useCallback } from "react";
+import { buildOutcomeMetricsLine } from "../utils/decision-ui";
 
 const MIN_ORDERS_FOR_DECISIONS = 30;
 
@@ -46,6 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let decisionOutcomes: any[] = [];
   let doneDecisionsCount = 0;
   let improvedDecisionsCount = 0;
+  let evaluatedOutcomesCount = 0;
 
   try {
     // Build filter conditions
@@ -115,17 +117,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: { shop, status: "done" },
     });
 
-    const decisionIds = await prisma.decision.findMany({
-      where: { shop },
-      select: { id: true },
-    });
-    const decisionIdList = decisionIds.map((row) => row.id);
-
-    if (decisionIdList.length > 0) {
+    if (decisions.length > 0) {
+      const decisionIdList = decisions.map((decision) => decision.id);
       improvedDecisionsCount = await prisma.decisionOutcome.count({
         where: {
           decisionId: { in: decisionIdList },
           outcomeStatus: "improved",
+        },
+      });
+      evaluatedOutcomesCount = await prisma.decisionOutcome.count({
+        where: {
+          decisionId: { in: decisionIdList },
+          evaluatedAt: { not: null },
         },
       });
     }
@@ -150,6 +153,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     currencySymbol,
     doneDecisionsCount,
     improvedDecisionsCount,
+    evaluatedOutcomesCount,
     filters: {
       status: statusFilter,
       type: typeFilter,
@@ -199,11 +203,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const storyLine = `Profit/order: ${formatSigned(baselineValue)} → ${formatSigned(postValue)}`;
         const deltaSigned = `${delta < 0 ? "-" : ""}${currencySymbol}${Math.abs(delta).toFixed(2)}`;
         const outcomeLine = `After you acted, net profit per order changed by ${deltaSigned} over ${windowDays} days.`;
+        const metricsLine = buildOutcomeMetricsLine(baseline, post, currencySymbol);
 
         if (outcome.outcomeStatus === "improved") {
           return {
             status: "improved",
             storyLine,
+            metricsLine,
             message: outcomeLine,
           };
         }
@@ -211,12 +217,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           return {
             status: "worsened",
             storyLine,
+            metricsLine,
             message: outcomeLine,
           };
         }
         return {
           status: "no_change",
           storyLine,
+          metricsLine,
           message: outcomeLine,
         };
       })(),
@@ -235,6 +243,7 @@ export default function Index() {
     currencySymbol,
     doneDecisionsCount,
     improvedDecisionsCount,
+    evaluatedOutcomesCount,
     filters,
   } =
     useLoaderData<typeof loader>();
@@ -244,7 +253,6 @@ export default function Index() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
-  const [showFirstRunNote, setShowFirstRunNote] = useState(false);
 
   const isRefreshing = refreshFetcher.state !== "idle";
   const refreshError =
@@ -278,14 +286,42 @@ export default function Index() {
     window.localStorage.setItem(autoOpenKey, "true");
   }, [decisions]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const firstRunKey = "decisionsFirstRunNote_v3";
-    const seen = window.localStorage.getItem(firstRunKey);
-    if (seen) return;
-    setShowFirstRunNote(true);
-    window.localStorage.setItem(firstRunKey, "true");
-  }, []);
+  const getMomentumLine = () => {
+    if (doneDecisionsCount > 0 && evaluatedOutcomesCount === 0) {
+      return `You acted on ${doneDecisionsCount} decisions. Outcomes are still evaluating.`;
+    }
+    if (doneDecisionsCount > 0) {
+      return `You acted on ${doneDecisionsCount} decisions, ${improvedDecisionsCount} improved.`;
+    }
+    return "No actions yet.";
+  };
+
+  const getMomentumBadge = () => {
+    if (improvedDecisionsCount > 0) {
+      return <Badge tone="success">Improving</Badge>;
+    }
+    if (doneDecisionsCount > 0) {
+      return <Badge tone="attention">Evaluating</Badge>;
+    }
+    return <Badge tone="subdued">No actions yet</Badge>;
+  };
+
+  const getRunBadges = () => {
+    const badges: JSX.Element[] = [];
+    badges.push(
+      <Badge key="count" tone="info">
+        {decisions.length} decision{decisions.length === 1 ? "" : "s"} surfaced
+      </Badge>
+    );
+    if (filters.confidence !== "all") {
+      badges.push(
+        <Badge key="confidence" tone="info">
+          {filters.confidence} confidence
+        </Badge>
+      );
+    }
+    return badges;
+  };
 
   // Automatic refresh when page loads with no prior analysis
   useEffect(() => {
@@ -351,16 +387,6 @@ export default function Index() {
 
   const formatCurrency = (value: number) => {
     return `${currencySymbol}${Math.abs(value).toFixed(2)}`;
-  };
-
-  const getDecisionStatusLine = (decision: any) => {
-    const parts: string[] = [];
-    if (decision.status === "done") parts.push("Done");
-    if (decision.status === "ignored") parts.push("Ignored");
-    if (decision.outcome?.status === "improved") parts.push("Outcome: Improved");
-    if (decision.outcome?.status === "worsened") parts.push("Outcome: Worsened");
-    if (decision.outcome?.status === "no_change") parts.push("Outcome: No clear change");
-    return parts.join(" · ");
   };
 
   const getNumbersTable = (decision: any) => {
@@ -447,13 +473,6 @@ export default function Index() {
                 </Text>
               </Banner>
             )}
-            {(showFirstRunNote || doneDecisionsCount > 0) && (
-              <Text as="p" variant="bodySm" tone="subdued">
-                {showFirstRunNote
-                  ? "We only show decisions when the numbers justify interrupting you."
-                  : `You acted on ${doneDecisionsCount} decisions, ${improvedDecisionsCount} improved.`}
-              </Text>
-            )}
             {showCogsWarning && (
               <Banner tone="warning">
                 <Text as="p" variant="bodyMd">
@@ -466,83 +485,124 @@ export default function Index() {
 
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between" wrap={false}>
-                  <Text as="h2" variant="headingMd">
-                    Filters
-                  </Text>
-                  <Button
-                    onClick={() => setShowFilters(!showFilters)}
-                    disclosure={showFilters ? "up" : "down"}
-                  >
-                    {showFilters ? "Hide" : "Show"} filters
-                  </Button>
-                </InlineStack>
-
-                <Collapsible
-                  open={showFilters}
-                  id="filters"
-                  transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
-                >
-                  <BlockStack gap="400">
-                    <InlineStack gap="400" wrap={true}>
-                      <div style={{ minWidth: "200px" }}>
-                        <Select
-                          label="Status"
-                          options={[
-                            { label: "Open", value: "active" },
-                            { label: "Done", value: "done" },
-                            { label: "Ignored", value: "ignored" },
-                            { label: "All", value: "all" },
-                          ]}
-                          value={filters.status}
-                          onChange={(value) => handleFilterChange("status", value)}
-                        />
-                      </div>
-                      <div style={{ minWidth: "200px" }}>
-                        <Select
-                          label="Type"
-                          options={[
-                            { label: "All types", value: "all" },
-                            { label: "Best-seller loss", value: "best_seller_loss" },
-                            { label: "Free shipping trap", value: "free_shipping_trap" },
-                            { label: "Discount-refund hit", value: "discount_refund_hit" },
-                          ]}
-                          value={filters.type}
-                          onChange={(value) => handleFilterChange("type", value)}
-                        />
-                      </div>
-                      <div style={{ minWidth: "200px" }}>
-                        <Select
-                          label="Confidence"
-                          options={[
-                            { label: "All confidence", value: "all" },
-                            { label: "High", value: "high" },
-                            { label: "Medium", value: "medium" },
-                            { label: "Low", value: "low" },
-                          ]}
-                          value={filters.confidence}
-                          onChange={(value) => handleFilterChange("confidence", value)}
-                        />
-                      </div>
-                      <div style={{ minWidth: "200px" }}>
-                        <Select
-                          label="Sort by"
-                          options={[
-                            { label: "Impact (highest first)", value: "impact" },
-                            { label: "Confidence", value: "confidence" },
-                            { label: "Newest first", value: "newest" },
-                          ]}
-                          value={filters.sort}
-                          onChange={(value) => handleFilterChange("sort", value)}
-                        />
-                      </div>
+            <BlockStack gap="300">
+              <InlineStack gap="300" wrap={true}>
+                <Card>
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Momentum
+                    </Text>
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="p" variant="bodyMd">
+                        {getMomentumLine()}
+                      </Text>
+                      {getMomentumBadge()}
                     </InlineStack>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Outcomes show only after the evaluation window. No claims, just Before to After.
+                    </Text>
                   </BlockStack>
-                </Collapsible>
-              </BlockStack>
-            </Card>
+                </Card>
+                <Card>
+                  <BlockStack gap="200">
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      This run
+                    </Text>
+                    <InlineStack gap="200" wrap={true}>
+                      {getRunBadges()}
+                      <Badge tone="info">
+                        Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month
+                      </Badge>
+                    </InlineStack>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      If nothing meets your threshold, this page stays quiet by design.
+                    </Text>
+                  </BlockStack>
+                </Card>
+              </InlineStack>
+
+              <Card>
+                <BlockStack gap="400">
+                  <InlineStack align="space-between" wrap={false}>
+                    <Text as="h2" variant="headingMd">
+                      Filters
+                    </Text>
+                    <Button
+                      onClick={() => setShowFilters(!showFilters)}
+                      disclosure={showFilters ? "up" : "down"}
+                    >
+                      {showFilters ? "Hide" : "Show"} filters
+                    </Button>
+                  </InlineStack>
+
+                  <Collapsible
+                    open={showFilters}
+                    id="filters"
+                    transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
+                  >
+                    <BlockStack gap="400">
+                      <InlineStack gap="400" wrap={true}>
+                        <div style={{ minWidth: "200px" }}>
+                          <Select
+                            label="Status"
+                            options={[
+                              { label: "Open", value: "active" },
+                              { label: "Done", value: "done" },
+                              { label: "Ignored", value: "ignored" },
+                              { label: "All", value: "all" },
+                            ]}
+                            value={filters.status}
+                            onChange={(value) => handleFilterChange("status", value)}
+                          />
+                        </div>
+                        <div style={{ minWidth: "200px" }}>
+                          <Select
+                            label="Type"
+                            options={[
+                              { label: "All types", value: "all" },
+                              { label: "Best-seller loss", value: "best_seller_loss" },
+                              { label: "Free shipping trap", value: "free_shipping_trap" },
+                              { label: "Discount-refund hit", value: "discount_refund_hit" },
+                            ]}
+                            value={filters.type}
+                            onChange={(value) => handleFilterChange("type", value)}
+                          />
+                        </div>
+                        <div style={{ minWidth: "200px" }}>
+                          <Select
+                            label="Confidence"
+                            options={[
+                              { label: "All confidence", value: "all" },
+                              { label: "High", value: "high" },
+                              { label: "Medium", value: "medium" },
+                              { label: "Low", value: "low" },
+                            ]}
+                            value={filters.confidence}
+                            onChange={(value) => handleFilterChange("confidence", value)}
+                          />
+                        </div>
+                        <div style={{ minWidth: "200px" }}>
+                          <Select
+                            label="Sort by"
+                            options={[
+                              { label: "Impact (highest first)", value: "impact" },
+                              { label: "Confidence", value: "confidence" },
+                              { label: "Newest first", value: "newest" },
+                            ]}
+                            value={filters.sort}
+                            onChange={(value) => handleFilterChange("sort", value)}
+                          />
+                        </div>
+                      </InlineStack>
+                    </BlockStack>
+                  </Collapsible>
+                </BlockStack>
+              </Card>
+
+              <Text as="p" variant="bodySm" tone="subdued">
+                Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}. Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month.
+              </Text>
+            </BlockStack>
           )}
 
           {decisions.length === 0 ? (
@@ -601,54 +661,61 @@ export default function Index() {
             </Card>
           ) : (
             <BlockStack gap="400">
-              <Text as="p" variant="bodySm" tone="subdued">
-                Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}{filters.status !== "active" || filters.type !== "all" || filters.confidence !== "all" ? " (filtered)" : ""}. Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month.
-              </Text>
-
               {decisions.map((decision) => (
                 <Card key={decision.id}>
                   <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="start">
-                      <BlockStack gap="200">
-                        <InlineStack gap="200" blockAlign="center">
-                          <Text as="h2" variant="headingLg">
-                            {getDecisionIcon(decision.type)} {decision.headline}
-                          </Text>
-                          {getConfidenceBadge(decision.confidence)}
-                        </InlineStack>
-                        {getDecisionStatusLine(decision) && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {getDecisionStatusLine(decision)}
-                          </Text>
-                        )}
-                        <Text as="p" variant="headingMd">
-                          {decision.actionTitle}
+                    <InlineStack align="space-between" blockAlign="center" wrap={true}>
+                      <Text as="h2" variant="headingLg">
+                        {decision.headline}
+                      </Text>
+                      {getConfidenceBadge(decision.confidence)}
+                    </InlineStack>
+
+                    <BlockStack gap="200">
+                      <Text as="p" variant="headingMd">
+                        {decision.actionTitle}
+                      </Text>
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        {decision.reason}
+                      </Text>
+                      {decision.dataJson?.whyNowMessage && (
+                        <Badge tone="attention">This got worse in the last 30 days.</Badge>
+                      )}
+                      {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          You ignored this earlier. The impact has grown from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to {formatCurrency(decision.impact)}.
                         </Text>
-                        <Text as="p" variant="bodyMd" tone="subdued">
-                          {decision.reason}
+                      )}
+                    </BlockStack>
+
+                    {decision.outcome?.metricsLine && (
+                      <BlockStack gap="100">
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {decision.outcome.metricsLine}
                         </Text>
-                        {decision.dataJson?.whyNowMessage && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {decision.dataJson.whyNowMessage}
+                        {decision.outcome?.status === "improved" && (
+                          <Text as="p" variant="bodySm" tone="success">
+                            Verdict: improved over 30 days.
                           </Text>
                         )}
-                        {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
+                        {decision.outcome?.status === "no_change" && (
                           <Text as="p" variant="bodySm" tone="subdued">
-                            You ignored this earlier. The impact has grown from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to {formatCurrency(decision.impact)}.
+                            Verdict: no clear change yet.
                           </Text>
                         )}
-                        {decision.outcome?.storyLine && decision.outcome?.message && (
-                          <BlockStack gap="100">
-                            <Text as="p" variant="bodySm" tone="subdued">
-                              {decision.outcome.storyLine}
-                            </Text>
-                            <Text as="p" variant="bodySm" tone="subdued">
-                              {decision.outcome.message}
-                            </Text>
-                          </BlockStack>
+                        {decision.outcome?.status === "worsened" && (
+                          <Text as="p" variant="bodySm" tone="critical">
+                            Verdict: worsened over 30 days.
+                          </Text>
                         )}
                       </BlockStack>
-                    </InlineStack>
+                    )}
+
+                    {decision.outcome?.status === "tracking" && (
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        {decision.outcome.message}
+                      </Text>
+                    )}
 
                     <InlineStack gap="200">
                       <Button

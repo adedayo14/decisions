@@ -64,6 +64,7 @@ export default function Settings() {
   const [shippingCost, setShippingCost] = useState(assumedShippingCost.toString());
   const [showSuccess, setShowSuccess] = useState(false);
   const [cogsFile, setCogsFile] = useState<File | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const isSaving = fetcher.state !== "idle";
   const isUploadingCogs = cogsFetcher.state !== "idle";
@@ -86,6 +87,27 @@ export default function Settings() {
     const formData = new FormData();
     formData.append("cogsFile", cogsFile);
     cogsFetcher.submit(formData, { method: "post", encType: "multipart/form-data", action: cogsAction });
+  };
+
+  const handleCogsDownload = async () => {
+    setDownloadError(null);
+    try {
+      const response = await fetch(cogsAction, { method: "GET" });
+      if (!response.ok) {
+        throw new Error("Failed to download CSV.");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "cogs.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "Failed to download CSV.");
+    }
   };
 
   const handleSave = () => {
@@ -186,7 +208,7 @@ export default function Settings() {
                 </Text>
 
                 <InlineStack gap="200">
-                  <Button url={cogsAction} variant="secondary">
+                  <Button variant="secondary" onClick={handleCogsDownload}>
                     Download COGS CSV
                   </Button>
                 </InlineStack>
@@ -222,6 +244,13 @@ export default function Settings() {
                   <Banner tone="critical">
                     <Text as="p" variant="bodyMd">
                       {cogsFetcher.data.error}
+                    </Text>
+                  </Banner>
+                )}
+                {downloadError && (
+                  <Banner tone="critical">
+                    <Text as="p" variant="bodyMd">
+                      {downloadError}
                     </Text>
                   </Banner>
                 )}

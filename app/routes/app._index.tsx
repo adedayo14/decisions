@@ -629,10 +629,6 @@ export default function Index() {
                   </Collapsible>
                 </BlockStack>
               </Card>
-
-              <Text as="p" variant="bodySm" tone="subdued">
-                Showing {decisions.length} decision{decisions.length > 1 ? "s" : ""}. Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month.
-              </Text>
             </BlockStack>
           )}
 

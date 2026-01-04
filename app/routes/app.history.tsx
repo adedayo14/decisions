@@ -138,38 +138,32 @@ export default function History() {
 
   return (
     <Page
-      title="Decision History"
+      title="History"
+      subtitle="Past analysis runs and decisions."
       backAction={{ url: `/app${search}` }}
+      fullWidth
     >
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
             <Card>
-              <BlockStack gap="400">
+              <InlineStack gap="200" align="space-between">
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Timeline of past decision analysis runs. Each run represents a snapshot of decisions generated from your order data.
+                  {runs.length} of {totalRuns} runs shown
                 </Text>
-
-                <InlineStack gap="200" align="space-between">
-                  <Text as="p" variant="bodyMd">
-                    Showing {runs.length} of {totalRuns} runs
-                  </Text>
-                  {runs.length < totalRuns && (
-                    <Link to={`/app/history?limit=${limit + 10}${search}`}>
-                      <Button>Load more</Button>
-                    </Link>
-                  )}
-                </InlineStack>
-              </BlockStack>
+                {runs.length < totalRuns && (
+                  <Link to={`/app/history?limit=${limit + 10}${search}`}>
+                    <Button>Load more</Button>
+                  </Link>
+                )}
+              </InlineStack>
             </Card>
 
             {runs.length === 0 && (
               <Card>
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyMd">
-                    No decision runs yet. Run analysis to see results here.
-                  </Text>
-                </BlockStack>
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  No runs yet. Analysis results appear here.
+                </Text>
               </Card>
             )}
 

@@ -15,6 +15,9 @@ import {
 import { authenticate } from "../shopify.server";
 import { prisma } from "../db.server";
 import { useState, useEffect, useCallback } from "react";
+import styles from "../styles/decisions.css?url";
+
+export const links = () => [{ rel: "stylesheet", href: styles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -159,68 +162,48 @@ export default function Settings() {
   return (
     <Page
       title="Settings"
+      subtitle="Configure costs and filters."
       backAction={{ url: `/app${search}` }}
+      fullWidth
     >
       <Layout>
         <Layout.Section>
           <BlockStack gap="400">
             {showSuccess && (
               <Banner tone="success">
-                Settings saved successfully!
+                Saved
               </Banner>
             )}
 
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Cost Assumptions
-                </Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  These settings help calculate profit for decisions that involve shipping costs.
-                </Text>
-
-                <Banner tone="info">
-                  <Text as="p" variant="bodyMd">
-                    Store currency: <strong>{currency}</strong> ({currencySymbol})
+                <div className="sectionHeader">
+                  <Text as="h2" variant="headingMd">
+                    Cost Assumptions
                   </Text>
-                </Banner>
+                </div>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Currency: {currency} ({currencySymbol})
+                </Text>
 
                 <TextField
-                  label="Assumed shipping cost per order"
+                  label="Shipping cost per order"
                   type="number"
                   value={shippingCost}
                   onChange={setShippingCost}
                   prefix={currencySymbol}
-                  helpText="Average cost you pay to ship an order. Used when calculating Best-Seller Loss and Free-Shipping Trap decisions."
+                  helpText="Average cost to ship one order."
                   autoComplete="off"
                 />
 
-                <Button
-                  variant="primary"
-                  onClick={handleSave}
-                  loading={isSaving}
-                >
-                  Save Settings
-                </Button>
-              </BlockStack>
-            </Card>
-
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Decision Filtering
-                </Text>
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  Only show decisions worth at least this amount per month. You can raise it, but not lower below {currencySymbol}50.
-                </Text>
-
                 <TextField
-                  label="Minimum impact per month"
+                  label="Minimum impact threshold"
                   type="number"
                   value={impactThreshold}
                   onChange={setImpactThreshold}
                   prefix={currencySymbol}
-                  helpText="Filters surfaced decisions only. History remains intact."
+                  suffix="/month"
+                  helpText={`Cannot go below ${currencySymbol}50. Filters visible decisions only.`}
                   autoComplete="off"
                 />
 
@@ -229,70 +212,47 @@ export default function Settings() {
                   onClick={handleSave}
                   loading={isSaving}
                 >
-                  Save Settings
+                  Save
                 </Button>
               </BlockStack>
             </Card>
 
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  COGS (Cost of Goods Sold)
+                <div className="sectionHeader">
+                  <Text as="h2" variant="headingMd">
+                    Product Costs
+                  </Text>
+                </div>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {cogsSummary.total} costs tracked · Shopify {cogsSummary.bySource.shopify} · CSV {cogsSummary.bySource.csv} · Manual {cogsSummary.bySource.manual}
                 </Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  COGS is managed directly in Shopify. Products without COGS are excluded from profit calculations.
+                  Set "Cost per item" in Shopify Products. Products without costs are excluded from profit calculations.
                 </Text>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  Synced {cogsSummary.total} costs
-                  {cogsSummary.lastUpdatedAt
-                    ? ` · Last updated ${new Date(cogsSummary.lastUpdatedAt).toLocaleString()}`
-                    : ""}
-                  {cogsSummary.bySource.shopify
-                    ? ` · Shopify ${cogsSummary.bySource.shopify}`
-                    : ""}
-                  {cogsSummary.bySource.csv ? ` · CSV ${cogsSummary.bySource.csv}` : ""}
-                  {cogsSummary.bySource.manual
-                    ? ` · Manual ${cogsSummary.bySource.manual}`
-                    : ""}
-                </Text>
-
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyMd" fontWeight="semibold">
-                    To add costs in Shopify:
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    1. Go to <strong>Products</strong> in your Shopify Admin
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    2. Select a product and click on a variant
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    3. Set <strong>"Cost per item"</strong> (what you pay to acquire/make it)
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    4. Save the product
-                  </Text>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    After adding costs, return to Decisions and the app will automatically include those products in profit analysis.
-                  </Text>
-                </BlockStack>
+                <Button
+                  url="/app/costs"
+                  variant="secondary"
+                >
+                  View costs
+                </Button>
               </BlockStack>
             </Card>
 
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  CSV import/export
-                </Text>
+                <div className="sectionHeader">
+                  <Text as="h2" variant="headingMd">
+                    CSV Import/Export
+                  </Text>
+                </div>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Upload a Shopify product export and we will read Variant SKU + Cost per item automatically.
+                  Upload Shopify product export to bulk import costs.
                 </Text>
 
-                <InlineStack gap="200">
-                  <Button variant="secondary" onClick={handleCogsDownload}>
-                    Download COGS CSV
-                  </Button>
-                </InlineStack>
+                <Button variant="secondary" onClick={handleCogsDownload}>
+                  Download CSV
+                </Button>
 
                 <BlockStack gap="200">
                   <DropZone accept=".csv" onDrop={handleCogsDrop}>

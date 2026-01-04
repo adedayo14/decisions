@@ -517,41 +517,40 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="300">
-              <Layout>
-                <Layout.Section oneHalf>
-                  <Card>
-                    <BlockStack gap="200">
-                      <div className="kicker">Momentum</div>
-                      <InlineStack align="space-between" blockAlign="center">
-                        <Text as="p" variant="bodyMd">
-                          {getMomentumLine()}
+              <div className="summarySection">
+                <InlineStack gap="400" wrap={false}>
+                  <div className="summaryCardWrapper">
+                    <Card>
+                      <BlockStack gap="200">
+                        <div className="kicker">Momentum</div>
+                        <InlineStack align="space-between" blockAlign="center">
+                          <Text as="p" variant="bodyMd">
+                            {getMomentumLine()}
+                          </Text>
+                          {getMomentumBadge()}
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          Outcomes show only after the evaluation window. No claims, just Before → After.
                         </Text>
-                        {getMomentumBadge()}
-                      </InlineStack>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Outcomes show only after the evaluation window. No claims, just Before → After.
-                      </Text>
-                    </BlockStack>
-                  </Card>
-                </Layout.Section>
-                <Layout.Section oneHalf>
-                  <Card>
-                    <BlockStack gap="200">
-                      <div className="kicker">This run</div>
-                      <InlineStack gap="200" wrap>
-                        {getRunBadges()}
-                        <Badge tone="subdued">
-                          Minimum impact: {currencySymbol}
-                          {minImpactThreshold.toFixed(0)}/month
-                        </Badge>
-                      </InlineStack>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        If nothing meets your threshold, this page stays quiet by design.
-                      </Text>
-                    </BlockStack>
-                  </Card>
-                </Layout.Section>
-              </Layout>
+                      </BlockStack>
+                    </Card>
+                  </div>
+                  <div className="summaryCardWrapper">
+                    <Card>
+                      <BlockStack gap="200">
+                        <div className="kicker">This run</div>
+                        <InlineStack gap="200" wrap>
+                          {getRunBadges()}
+                          <Badge>Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month</Badge>
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          If nothing meets your threshold, this page stays quiet by design.
+                        </Text>
+                      </BlockStack>
+                    </Card>
+                  </div>
+                </InlineStack>
+              </div>
 
               <Card>
                 <BlockStack gap="400">
@@ -711,7 +710,9 @@ export default function Index() {
                     </InlineStack>
 
                     <BlockStack gap="200">
-                      <h3 className="actionTitle">{primary}</h3>
+                      <Text as="h3" variant="headingLg">
+                        {primary}
+                      </Text>
                       {alternative && (
                         <div className="badgeRow">
                           <Badge tone="subdued">{alternative}</Badge>

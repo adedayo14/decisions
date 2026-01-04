@@ -1,9 +1,18 @@
 /* Premium spacing and hierarchy for Decisions app */
 
 .decisionsContainer {
-  max-width: 1100px;
-  margin: 0 auto;
   padding: 28px 20px 44px;
+}
+
+.summarySection {
+  background: #fafbfb;
+  border-radius: 12px;
+  padding: 16px 20px 20px;
+  margin-bottom: 4px;
+}
+
+.summaryCardWrapper {
+  flex: 1;
 }
 
 .impactHeadline {
@@ -29,17 +38,12 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.actionTitle {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-
 .metaLine {
-  margin: 2px 0 -2px;
-  font-size: 14px;
+  margin: 4px 0 0;
+  font-size: 15px;
   color: #6d7175;
+  font-weight: 450;
+  line-height: 1.5;
 }
 
 .kicker {

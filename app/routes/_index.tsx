@@ -211,21 +211,22 @@ export default function Index() {
 
             <div className="badgeRow">
               <span>Embedded in Shopify Admin</span>
-              <span>Polaris UI</span>
               <span>Transparent assumptions</span>
             </div>
+          </div>
+        </section>
 
-            <div className="micro">
-              <h3>Decision types</h3>
-              <ul>
-                <li>Best-seller loss</li>
-                <li>Free-shipping trap</li>
-                <li>Discount–refund hit</li>
-              </ul>
-              <p className="micro__note">
-                Each decision includes impact, confidence, and the six-metric breakdown.
-              </p>
-            </div>
+        <section className="section section--split">
+          <div className="micro">
+            <h3>Decision types</h3>
+            <ul>
+              <li>Best-seller loss</li>
+              <li>Free-shipping trap</li>
+              <li>Discount–refund hit</li>
+            </ul>
+            <p className="micro__note">
+              Each decision includes impact, confidence, and the six-metric breakdown.
+            </p>
           </div>
 
           <div className="surface">
@@ -237,8 +238,8 @@ export default function Index() {
             <div className="surface__example">
               <p className="surface__kicker">Example empty state copy</p>
               <p className="surface__quote">
-                “We analysed 39 orders. No decisions meet your threshold right now. Showing only decisions ≥ £50/month
-                (change in Settings).”
+                "We analysed 39 orders. No decisions meet your threshold right now. Showing only decisions ≥ £50/month
+                (change in Settings)."
               </p>
             </div>
           </div>

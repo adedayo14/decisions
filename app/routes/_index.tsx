@@ -89,32 +89,27 @@ export default function Index() {
                 <span className="tag tag--high">High confidence</span>
               </div>
 
-              <h3 className="card__headline">£320/month at risk</h3>
+              <h3 className="card__headline">£485/month at risk</h3>
 
-              <p className="card__action">Stop pushing Merino beanie in bundles</p>
+              <p className="card__action">Stop bundling Vitamin C serum 30ml with free shipping</p>
 
               <p className="card__reason">
-                Tight margin plus free shipping is dragging net profit below zero in the last 90 days.
+                This bundle margin is too thin. After COGS and shipping, net profit is negative across the last 90 days.
               </p>
 
               <div className="whyNow">
                 <span className="whyNow__dot" aria-hidden="true" />
-                <span>This got worse in the last 30 days.</span>
+                <span>Why now: this worsened in the last 30 days.</span>
               </div>
 
               <div className="outcome">
                 <p className="outcome__label">After you acted</p>
                 <div className="outcome__row">
-                  <span>Profit per order</span>
-                  <strong>−£0.26 → +£0.18</strong>
-                </div>
-                <div className="outcome__row">
-                  <span>Refund rate</span>
-                  <strong>12% → 6%</strong>
-                </div>
-                <div className="outcome__row">
-                  <span>Shipping loss per order</span>
-                  <strong>£1.10 → £0.60</strong>
+                  <span>Profit/order: −£0.26 → +£0.18</span>
+                  <span>·</span>
+                  <span>Refund rate: 12% → 6%</span>
+                  <span>·</span>
+                  <span>Shipping loss/order: £1.10 → £0.60</span>
                 </div>
                 <p className="outcome__verdict">Outcome: improved over 30 days.</p>
               </div>
@@ -125,29 +120,29 @@ export default function Index() {
 
               <div className="numbers">
                 <div>
-                  <span>Revenue</span>
-                  <strong>£984</strong>
+                  <span>Revenue:</span>
+                  <strong>£1,460</strong>
                 </div>
                 <div>
-                  <span>COGS</span>
-                  <strong>£902</strong>
+                  <span>COGS:</span>
+                  <strong>£1,230</strong>
                 </div>
                 <div>
-                  <span>Discounts</span>
+                  <span>Discounts:</span>
                   <strong>£0</strong>
                 </div>
                 <div>
-                  <span>Refunds</span>
+                  <span>Refunds:</span>
                   <strong>£0</strong>
                 </div>
                 <div>
-                  <span>Estimated shipping</span>
-                  <strong>£71.75</strong>
+                  <span>Estimated shipping:</span>
+                  <strong>£108.50</strong>
                 </div>
 
                 <div className="numbers__total">
-                  <span>Net profit</span>
-                  <strong className="neg">−£10.25</strong>
+                  <span>Net profit:</span>
+                  <strong className="neg">−£15.50</strong>
                 </div>
               </div>
 

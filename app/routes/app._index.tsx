@@ -22,8 +22,11 @@ import { getActiveDecisions } from "../services/decision-rules.server";
 import { prisma } from "../db.server";
 import { useEffect, useState, useCallback } from "react";
 import { buildOutcomeMetricsLine } from "../utils/decision-ui";
+import styles from "../styles/decisions.css?url";
 
 const MIN_ORDERS_FOR_DECISIONS = 30;
+
+export const links = () => [{ rel: "stylesheet", href: styles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -307,9 +310,12 @@ export default function Index() {
     return <Badge tone="subdued">No actions yet</Badge>;
   };
 
-  const formatImpactHeadline = (impact: number) => {
+  const splitImpactHeadline = (impact: number) => {
     const rounded = Math.round(impact);
-    return `${currencySymbol}${rounded}/month at risk`;
+    return {
+      amount: `${currencySymbol}${rounded}`,
+      suffix: "/month at risk",
+    };
   };
 
   const splitAlternativeAction = (actionTitle: string) => {
@@ -470,6 +476,7 @@ export default function Index() {
   return (
     <Page
       title="Decisions"
+      subtitle="Showing only decisions worth your attention."
       primaryAction={{
         content: isRefreshing ? "Analyzing..." : "Refresh analysis",
         onAction: () => refreshFetcher.submit({}, { method: "post", action: refreshAction }),
@@ -486,7 +493,8 @@ export default function Index() {
         },
       ]}
     >
-      <Layout>
+      <div className="decisionsContainer">
+        <Layout>
         <Layout.Section>
           <BlockStack gap="200">
             {refreshError && (
@@ -513,9 +521,7 @@ export default function Index() {
                 <Layout.Section oneHalf>
                   <Card>
                     <BlockStack gap="200">
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Momentum
-                      </Text>
+                      <div className="kicker">Momentum</div>
                       <InlineStack align="space-between" blockAlign="center">
                         <Text as="p" variant="bodyMd">
                           {getMomentumLine()}
@@ -531,9 +537,7 @@ export default function Index() {
                 <Layout.Section oneHalf>
                   <Card>
                     <BlockStack gap="200">
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        This run
-                      </Text>
+                      <div className="kicker">This run</div>
                       <InlineStack gap="200" wrap>
                         {getRunBadges()}
                         <Badge tone="subdued">
@@ -689,48 +693,45 @@ export default function Index() {
             </Card>
           ) : (
             <BlockStack gap="400">
-              {decisions.map((decision) => (
+              {decisions.map((decision) => {
+                const { amount, suffix } = splitImpactHeadline(decision.impact);
+                const { primary, alternative } = splitAlternativeAction(decision.actionTitle);
+
+                return (
                 <Card key={decision.id}>
                   <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="center" wrap={true}>
-                      <Text as="h2" variant="headingXl">
-                        {formatImpactHeadline(decision.impact)}
-                      </Text>
+                    <InlineStack align="space-between" blockAlign="start" wrap={true}>
+                      <div>
+                        <h2 className="impactHeadline">
+                          {amount}
+                          <span className="impactSubtext">{suffix}</span>
+                        </h2>
+                      </div>
                       {getConfidenceBadge(decision.confidence)}
                     </InlineStack>
 
-                    {(() => {
-                      const { primary, alternative } = splitAlternativeAction(decision.actionTitle);
+                    <BlockStack gap="200">
+                      <h3 className="actionTitle">{primary}</h3>
+                      {alternative && (
+                        <div className="badgeRow">
+                          <Badge tone="subdued">{alternative}</Badge>
+                        </div>
+                      )}
+                      <div className="metaLine">{decision.reason}</div>
 
-                      return (
-                        <BlockStack gap="200">
-                          <Text as="p" variant="headingMd">
-                            {primary}
-                          </Text>
-                          {alternative && (
-                            <InlineStack gap="200" wrap={true}>
-                              <Badge tone="subdued">{alternative}</Badge>
-                            </InlineStack>
-                          )}
-                          <Text as="p" variant="bodyMd" tone="subdued">
-                            {decision.reason}
-                          </Text>
+                      {decision.dataJson?.whyNowMessage && (
+                        <div className="badgeRow">
+                          <Badge tone="attention">{decision.dataJson.whyNowMessage}</Badge>
+                        </div>
+                      )}
 
-                          {decision.dataJson?.whyNowMessage && (
-                            <InlineStack>
-                              <Badge tone="attention">{decision.dataJson.whyNowMessage}</Badge>
-                            </InlineStack>
-                          )}
-
-                          {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
-                            <Text as="p" variant="bodySm" tone="subdued">
-                              You ignored this earlier. Impact grew from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to{" "}
-                              {formatCurrency(decision.impact)}.
-                            </Text>
-                          )}
-                        </BlockStack>
-                      );
-                    })()}
+                      {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          You ignored this earlier. Impact grew from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to{" "}
+                          {formatCurrency(decision.impact)}.
+                        </Text>
+                      )}
+                    </BlockStack>
 
                     {decision.outcome?.metricsLine && (
                       <BlockStack gap="100">
@@ -796,11 +797,13 @@ export default function Index() {
                     </Collapsible>
                   </BlockStack>
                 </Card>
-              ))}
+              );
+              })}
             </BlockStack>
           )}
         </Layout.Section>
       </Layout>
+      </div>
     </Page>
   );
 }

@@ -1,0 +1,67 @@
+/* Premium spacing and hierarchy for Decisions app */
+
+.decisionsContainer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 20px 44px;
+}
+
+.impactHeadline {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.impactSubtext {
+  font-size: 18px;
+  font-weight: 600;
+  color: #6d7175;
+  margin-left: 6px;
+}
+
+.decisionCard {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
+}
+
+.summaryCard {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.actionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.metaLine {
+  margin: 2px 0 -2px;
+  font-size: 14px;
+  color: #6d7175;
+}
+
+.kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #6d7175;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.badgeRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}

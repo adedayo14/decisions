@@ -31,8 +31,9 @@ export interface VariantProfitMetrics {
 
   // Profit metrics
   grossProfit: number; // revenue - COGS
-  netProfit: number; // revenue - COGS - shipping - discounts + refunds
+  netProfit: number; // revenue - COGS - shipping - discounts - refunds
   marginPercent: number; // (netProfit / revenue) * 100
+  hasCogs: boolean;
 }
 
 export interface OrderProfitMetrics {
@@ -171,6 +172,7 @@ export async function calculateVariantProfits(
           grossProfit: 0,
           netProfit: 0,
           marginPercent: 0,
+          hasCogs: cost !== null && cost > 0,
         };
         variantMetrics.set(variantId, metrics);
       }
@@ -186,6 +188,8 @@ export async function calculateVariantProfits(
       // Calculate COGS
       if (metrics.cogs > 0) {
         metrics.totalCOGS += metrics.cogs * item.quantity;
+      } else {
+        metrics.hasCogs = false;
       }
 
       // Assume shipping cost per order (distributed across line items)

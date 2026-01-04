@@ -64,9 +64,9 @@ export async function detectBestSellerLoss(
   const variantMetrics = await calculateVariantProfits(shop, orders);
   const topSellers = getTopSellingVariants(variantMetrics, 20);
 
-  // Find top sellers with negative or very low profit
+  // Find top sellers with negative or very low profit (only with known COGS)
   const losingBestSellers = topSellers.filter(
-    (v) => v.netProfit < 0 || v.marginPercent < 5
+    (v) => (v.netProfit < 0 || v.marginPercent < 5) && v.hasCogs
   );
 
   if (losingBestSellers.length === 0) {
@@ -211,7 +211,8 @@ export async function detectDiscountRefundHit(
       v.discountRate >= 20 && // At least 20% discounted
       v.refundRate >= 15 && // At least 15% refunded
       v.unitsSold >= 10 && // Minimum volume for significance
-      v.netProfit < 0 // Actually losing money
+      v.netProfit < 0 && // Actually losing money
+      v.hasCogs // Only include variants with known COGS
   );
 
   if (doubleHitVariants.length === 0) {

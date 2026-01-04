@@ -19,6 +19,8 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { prisma } from "../db.server";
+import { getCachedData } from "../services/data-cache.server";
+import type { VariantCostData } from "../services/shopify-data.server";
 import { useEffect, useState, useCallback } from "react";
 import { buildOutcomeMetricsLine } from "../utils/decision-ui";
 import styles from "../styles/decisions.css?url";
@@ -51,6 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   let doneDecisionsCount = 0;
   let improvedDecisionsCount = 0;
   let evaluatedOutcomesCount = 0;
+  let missingCogsCount = 0;
 
   try {
     // Build filter conditions
@@ -116,6 +119,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
+    const cachedVariants = await getCachedData<VariantCostData[]>(
+      shop,
+      "variant_costs"
+    );
+    if (cachedVariants && cachedVariants.length > 0) {
+      const variantIds = cachedVariants.map((variant) => variant.variantId);
+      const cogsRows = await prisma.cOGS.findMany({
+        where: {
+          shop,
+          variantId: { in: variantIds },
+        },
+        select: { variantId: true },
+      });
+      const cogsSet = new Set(cogsRows.map((row) => row.variantId));
+      missingCogsCount = variantIds.filter((id) => !cogsSet.has(id)).length;
+    }
+
     doneDecisionsCount = await prisma.decision.count({
       where: { shop, status: "done" },
     });
@@ -157,6 +177,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     doneDecisionsCount,
     improvedDecisionsCount,
     evaluatedOutcomesCount,
+    missingCogsCount,
     filters: {
       status: statusFilter,
       type: typeFilter,
@@ -247,6 +268,7 @@ export default function Index() {
     doneDecisionsCount,
     improvedDecisionsCount,
     evaluatedOutcomesCount,
+    missingCogsCount,
     filters,
   } =
     useLoaderData<typeof loader>();
@@ -459,7 +481,7 @@ export default function Index() {
             </Text>
           )}
         <Text as="p" variant="bodySm" tone="subdued">
-          Note: Refunds are counted when processed, not when originally ordered. Shipping costs are estimated per order.
+          Note: Refunds are counted when processed, not when originally ordered. Shipping is estimated per order using your assumption and split across items.
         </Text>
       </BlockStack>
     );
@@ -493,6 +515,13 @@ export default function Index() {
               <Banner tone="critical">
                 <Text as="p" variant="bodyMd">
                   Refresh failed: {refreshError}
+                </Text>
+              </Banner>
+            )}
+            {missingCogsCount > 0 && (
+              <Banner tone="warning">
+                <Text as="p" variant="bodyMd">
+                  Some products are missing cost. Add COGS to improve accuracy.
                 </Text>
               </Banner>
             )}

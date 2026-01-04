@@ -10,6 +10,7 @@ import {
   InlineStack,
   Badge,
   Banner,
+  Divider,
   Collapsible,
   DataTable,
   EmptyState,
@@ -328,7 +329,7 @@ export default function Index() {
     const badges: JSX.Element[] = [];
     badges.push(
       <Badge key="count" tone="subdued">
-        {decisions.length} decision{decisions.length === 1 ? "" : "s"} surfaced
+        {decisions.length} decision{decisions.length === 1 ? "" : "s"} shown
       </Badge>
     );
     if (filters.confidence !== "all") {
@@ -407,11 +408,15 @@ export default function Index() {
     return `${currencySymbol}${Math.abs(value).toFixed(2)}`;
   };
 
+  const formatSignedCurrency = (value: number) => {
+    const formatted = `${currencySymbol}${Math.abs(value).toFixed(2)}`;
+    return value < 0 ? `-${formatted}` : formatted;
+  };
+
   const getNumbersTable = (decision: any) => {
     const data = decision.dataJson || {};
     const netProfit = Number(data.netProfit ?? 0);
-    const netProfitText =
-      netProfit < 0 ? `-${formatCurrency(netProfit)}` : formatCurrency(netProfit);
+    const netProfitText = formatSignedCurrency(netProfit);
     const netProfitTone = netProfit < 0 ? "critical" : "success";
 
     const rows = [
@@ -504,40 +509,45 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="300">
-              <InlineStack gap="300" wrap={true}>
-                <Card>
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Momentum
-                    </Text>
-                    <InlineStack align="space-between" blockAlign="center">
-                      <Text as="p" variant="bodyMd">
-                        {getMomentumLine()}
+              <Layout>
+                <Layout.Section oneHalf>
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Momentum
                       </Text>
-                      {getMomentumBadge()}
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Outcomes show only after the evaluation window. No claims, just Before → After.
-                    </Text>
-                  </BlockStack>
-                </Card>
-                <Card>
-                  <BlockStack gap="200">
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      This run
-                    </Text>
-                    <InlineStack gap="200" wrap={true}>
-                      {getRunBadges()}
-                      <Badge tone="subdued">
-                        Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month
-                      </Badge>
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      If nothing meets your threshold, this page stays quiet by design.
-                    </Text>
-                  </BlockStack>
-                </Card>
-              </InlineStack>
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Text as="p" variant="bodyMd">
+                          {getMomentumLine()}
+                        </Text>
+                        {getMomentumBadge()}
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Outcomes show only after the evaluation window. No claims, just Before → After.
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+                <Layout.Section oneHalf>
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        This run
+                      </Text>
+                      <InlineStack gap="200" wrap>
+                        {getRunBadges()}
+                        <Badge tone="subdued">
+                          Minimum impact: {currencySymbol}
+                          {minImpactThreshold.toFixed(0)}/month
+                        </Badge>
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        If nothing meets your threshold, this page stays quiet by design.
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+              </Layout>
 
               <Card>
                 <BlockStack gap="400">
@@ -683,7 +693,7 @@ export default function Index() {
                 <Card key={decision.id}>
                   <BlockStack gap="400">
                     <InlineStack align="space-between" blockAlign="center" wrap={true}>
-                      <Text as="h2" variant="headingLg">
+                      <Text as="h2" variant="headingXl">
                         {formatImpactHeadline(decision.impact)}
                       </Text>
                       {getConfidenceBadge(decision.confidence)}
@@ -708,7 +718,7 @@ export default function Index() {
 
                           {decision.dataJson?.whyNowMessage && (
                             <InlineStack>
-                              <Badge tone="attention">This got worse in the last 30 days</Badge>
+                              <Badge tone="attention">{decision.dataJson.whyNowMessage}</Badge>
                             </InlineStack>
                           )}
 
@@ -751,6 +761,8 @@ export default function Index() {
                         {decision.outcome.message}
                       </Text>
                     )}
+
+                    <Divider />
 
                     <InlineStack gap="200" wrap={true}>
                       <Button variant="primary" onClick={() => handleMarkDone(decision.id)}>

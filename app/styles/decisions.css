@@ -1,22 +1,6 @@
 /* Premium spacing and hierarchy for Decisions app */
 
-.decisionsContainer {
-  margin: 0 -20px;
-}
-
-.summarySection {
-  background: #fafbfb;
-  border-radius: 12px;
-  padding: 16px 20px 20px;
-  margin: 0 20px 16px;
-}
-
-.summaryCardWrapper {
-  flex: 1;
-  display: flex;
-}
-
-.summaryCardWrapper .Polaris-Card {
+.summaryCard {
   height: 100%;
   display: flex;
   flex-direction: column;

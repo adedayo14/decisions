@@ -505,7 +505,7 @@ export default function Index() {
             <BlockStack gap="400">
               <Layout>
                 <Layout.Section oneHalf>
-                  <Card>
+                  <Card className="summaryCard">
                     <BlockStack gap="200">
                       <Text as="p" variant="bodySm" tone="subdued">
                         Momentum
@@ -523,7 +523,7 @@ export default function Index() {
                   </Card>
                 </Layout.Section>
                 <Layout.Section oneHalf>
-                  <Card>
+                  <Card className="summaryCard">
                     <BlockStack gap="200">
                       <Text as="p" variant="bodySm" tone="subdued">
                         This run

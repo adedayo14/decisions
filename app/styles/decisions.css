@@ -8,20 +8,19 @@
 
 .summaryRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
   align-items: stretch;
-  width: 100%;
 }
 
 .summaryRow__panel {
   display: flex;
-  min-width: 0;
-  width: 100%;
+  flex-direction: column;
 }
 
 .summaryRow__panel .Polaris-Card {
-  width: 100%;
+  flex: 1;
+  height: 100%;
 }
 
 .filtersGrid {

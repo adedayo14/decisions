@@ -9,8 +9,8 @@ export function formatRefreshErrorMessage(raw: unknown): string {
       : JSON.stringify(raw ?? "");
 
   if (message.includes(EMPTY_RESPONSE_SNIPPET)) {
-    return "Refresh failed: Shopify returned an empty response. Please retry.";
+    return "Shopify returned an empty response. Please retry.";
   }
 
-  return `Refresh failed: ${message}`;
+  return message || "Unexpected error during refresh. Please retry.";
 }

@@ -96,7 +96,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Return error as JSON so we can see what failed
     return json(
       {
-        error: formatRefreshErrorMessage(formatUnknownError(error)),
+        error: formatRefreshErrorMessage(error),
         stack: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }

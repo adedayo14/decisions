@@ -563,59 +563,51 @@ export default function Index() {
                     transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
                   >
                     <BlockStack gap="400">
-                      <InlineStack gap="400" wrap={true}>
-                        <div style={{ minWidth: "200px" }}>
-                          <Select
-                            label="Status"
-                            options={[
-                              { label: "Open", value: "active" },
-                              { label: "Done", value: "done" },
-                              { label: "Ignored", value: "ignored" },
-                              { label: "All", value: "all" },
-                            ]}
-                            value={filters.status}
-                            onChange={(value) => handleFilterChange("status", value)}
-                          />
-                        </div>
-                        <div style={{ minWidth: "200px" }}>
-                          <Select
-                            label="Type"
-                            options={[
-                              { label: "All types", value: "all" },
-                              { label: "Best-seller loss", value: "best_seller_loss" },
-                              { label: "Free shipping trap", value: "free_shipping_trap" },
-                              { label: "Discount-refund hit", value: "discount_refund_hit" },
-                            ]}
-                            value={filters.type}
-                            onChange={(value) => handleFilterChange("type", value)}
-                          />
-                        </div>
-                        <div style={{ minWidth: "200px" }}>
-                          <Select
-                            label="Confidence"
-                            options={[
-                              { label: "All confidence", value: "all" },
-                              { label: "High", value: "high" },
-                              { label: "Medium", value: "medium" },
-                              { label: "Low", value: "low" },
-                            ]}
-                            value={filters.confidence}
-                            onChange={(value) => handleFilterChange("confidence", value)}
-                          />
-                        </div>
-                        <div style={{ minWidth: "200px" }}>
-                          <Select
-                            label="Sort by"
-                            options={[
-                              { label: "Impact (highest first)", value: "impact" },
-                              { label: "Confidence", value: "confidence" },
-                              { label: "Newest first", value: "newest" },
-                            ]}
-                            value={filters.sort}
-                            onChange={(value) => handleFilterChange("sort", value)}
-                          />
-                        </div>
-                      </InlineStack>
+                      <div className="filtersGrid">
+                        <Select
+                          label="Status"
+                          options={[
+                            { label: "Open", value: "active" },
+                            { label: "Done", value: "done" },
+                            { label: "Ignored", value: "ignored" },
+                            { label: "All", value: "all" },
+                          ]}
+                          value={filters.status}
+                          onChange={(value) => handleFilterChange("status", value)}
+                        />
+                        <Select
+                          label="Type"
+                          options={[
+                            { label: "All types", value: "all" },
+                            { label: "Best-seller loss", value: "best_seller_loss" },
+                            { label: "Free shipping trap", value: "free_shipping_trap" },
+                            { label: "Discount-refund hit", value: "discount_refund_hit" },
+                          ]}
+                          value={filters.type}
+                          onChange={(value) => handleFilterChange("type", value)}
+                        />
+                        <Select
+                          label="Confidence"
+                          options={[
+                            { label: "All confidence", value: "all" },
+                            { label: "High", value: "high" },
+                            { label: "Medium", value: "medium" },
+                            { label: "Low", value: "low" },
+                          ]}
+                          value={filters.confidence}
+                          onChange={(value) => handleFilterChange("confidence", value)}
+                        />
+                        <Select
+                          label="Sort by"
+                          options={[
+                            { label: "Impact (highest first)", value: "impact" },
+                            { label: "Confidence", value: "confidence" },
+                            { label: "Newest first", value: "newest" },
+                          ]}
+                          value={filters.sort}
+                          onChange={(value) => handleFilterChange("sort", value)}
+                        />
+                      </div>
                     </BlockStack>
                   </Collapsible>
                 </BlockStack>

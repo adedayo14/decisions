@@ -521,7 +521,7 @@ export default function Index() {
             {missingCogsCount > 0 && (
               <Banner tone="warning">
                 <Text as="p" variant="bodyMd">
-                  Some products are missing cost. Add COGS to improve accuracy.
+                  {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} missing cost. These were excluded from profit decisions. Add COGS to improve accuracy.
                 </Text>
               </Banner>
             )}

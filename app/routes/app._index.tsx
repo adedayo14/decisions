@@ -620,7 +620,8 @@ export default function Index() {
           {decisions.length === 0 ? (
             <Card>
               <EmptyState
-                heading={isRefreshing ? "Analyzing your data..." : "No decisions yet"}
+                heading={isRefreshing ? "Analysing your data..." : "No decisions yet"}
+                image=""
                 action={{
                   content: "Refresh analysis",
                   onAction: () => refreshFetcher.submit({}, { method: "post", action: refreshAction }),
@@ -631,44 +632,23 @@ export default function Index() {
                   url: settingsUrl,
                 }}
               >
-                <BlockStack gap="300">
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  {isRefreshing
+                    ? "Analysing your Shopify orders..."
+                    : lastAnalyzedAt && orderCount > 0
+                    ? `We analysed ${orderCount} orders from the last 90 days. Nothing met your ${currencySymbol}${minImpactThreshold.toFixed(0)}/month threshold.`
+                    : "We haven't analysed your data yet."}
+                </Text>
+                {!isRefreshing && lastAnalyzedAt && orderCount >= minOrdersRequired && (
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    {isRefreshing
-                      ? "We're analyzing your Shopify orders to find profit opportunities. This may take a moment..."
-                      : lastAnalyzedAt
-                      ? `We analyzed ${orderCount} orders from the last 90 days but haven't found any profit opportunities yet.`
-                      : "We haven't analyzed your data yet. We'll automatically check your orders when you first load the app."}
+                    That's a good sign. We'll surface anything worth acting on as new orders come in.
                   </Text>
-                  {!isRefreshing && orderCount > 0 && orderCount < minOrdersRequired && (
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Not enough evidence yet. We need at least {minOrdersRequired} orders to spot
-                      reliable patterns.
-                    </Text>
-                  )}
-                  {!isRefreshing && orderCount >= minOrdersRequired && (
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      This is good news - your margins look healthy. We'll surface new opportunities
-                      as your data grows.
-                    </Text>
-                  )}
-                  {!isRefreshing && cogsCount === 0 && (
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      We couldn't find any product costs yet. Add costs in Shopify or upload a CSV
-                      to unlock profit-based decisions.
-                    </Text>
-                  )}
-                  {!isRefreshing && (
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      Showing only decisions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month (change in Settings).
-                    </Text>
-                  )}
-                  {orderCount > 0 && !isRefreshing && (
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      For best results, we recommend having 100+ orders. Check back as you get more
-                      sales.
-                    </Text>
-                  )}
-                </BlockStack>
+                )}
+                {!isRefreshing && lastAnalyzedAt && (
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    You can change the threshold in Settings.
+                  </Text>
+                )}
               </EmptyState>
             </Card>
           ) : (

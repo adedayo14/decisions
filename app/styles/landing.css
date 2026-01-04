@@ -420,7 +420,7 @@ a {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .badgeRow {
@@ -446,6 +446,9 @@ a {
   border: 1px solid var(--stroke);
   border-radius: 18px;
   padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .micro ul {
@@ -465,6 +468,9 @@ a {
   padding: 22px;
   box-shadow: var(--shadow);
   border: 1px solid rgba(15, 36, 38, 0.04);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .surface__title {

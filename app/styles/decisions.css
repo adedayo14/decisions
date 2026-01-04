@@ -6,6 +6,26 @@
   flex-direction: column;
 }
 
+.summaryRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.summaryRow__panel {
+  display: flex;
+}
+
+.summaryRow__panel .Polaris-Card {
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 .impactHeadline {
   font-size: 34px;
   font-weight: 800;

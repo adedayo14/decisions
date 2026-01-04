@@ -503,8 +503,8 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="400">
-              <Layout>
-                <Layout.Section oneHalf>
+              <div className="summaryRow">
+                <div className="summaryRow__panel">
                   <Card className="summaryCard">
                     <BlockStack gap="200">
                       <Text as="p" variant="bodySm" tone="subdued">
@@ -521,8 +521,8 @@ export default function Index() {
                       </Text>
                     </BlockStack>
                   </Card>
-                </Layout.Section>
-                <Layout.Section oneHalf>
+                </div>
+                <div className="summaryRow__panel">
                   <Card className="summaryCard">
                     <BlockStack gap="200">
                       <Text as="p" variant="bodySm" tone="subdued">
@@ -540,8 +540,8 @@ export default function Index() {
                       </Text>
                     </BlockStack>
                   </Card>
-                </Layout.Section>
-              </Layout>
+                </div>
+              </div>
 
               <Card>
                 <BlockStack gap="400">

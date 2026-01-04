@@ -4,6 +4,7 @@ import { ingestShopifyData, getOrderData } from "../services/data-ingestion.serv
 import { generateDecisions } from "../services/decision-rules.server";
 import { clearShopCache } from "../services/data-cache.server";
 import { evaluateDecisionOutcomes } from "../services/decision-outcomes.server";
+import { formatRefreshErrorMessage } from "../services/refresh-errors.server";
 
 async function getAccessScopes(admin: Awaited<ReturnType<typeof authenticate.admin>>["admin"]) {
   const response = await admin.graphql(`
@@ -95,7 +96,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     // Return error as JSON so we can see what failed
     return json(
       {
-        error: formatUnknownError(error),
+        error: formatRefreshErrorMessage(formatUnknownError(error)),
         stack: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }

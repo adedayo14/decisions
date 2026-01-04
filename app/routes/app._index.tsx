@@ -4,6 +4,7 @@ import {
   Page,
   Layout,
   Card,
+  Box,
   BlockStack,
   Text,
   Button,
@@ -14,11 +15,9 @@ import {
   Collapsible,
   DataTable,
   EmptyState,
-  ChoiceList,
   Select,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { getActiveDecisions } from "../services/decision-rules.server";
 import { prisma } from "../db.server";
 import { useEffect, useState, useCallback } from "react";
 import { buildOutcomeMetricsLine } from "../utils/decision-ui";
@@ -384,19 +383,6 @@ export default function Index() {
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
 
-  const getDecisionIcon = (type: string) => {
-    switch (type) {
-      case "best_seller_loss":
-        return "📉";
-      case "free_shipping_trap":
-        return "📦";
-      case "discount_refund_hit":
-        return "💸";
-      default:
-        return "💡";
-    }
-  };
-
   const getConfidenceBadge = (confidence: string) => {
     switch (confidence) {
       case "high":
@@ -477,6 +463,7 @@ export default function Index() {
     <Page
       title="Decisions"
       subtitle="Showing only decisions worth your attention."
+      fullWidth
       primaryAction={{
         content: isRefreshing ? "Analyzing..." : "Refresh analysis",
         onAction: () => refreshFetcher.submit({}, { method: "post", action: refreshAction }),
@@ -493,8 +480,7 @@ export default function Index() {
         },
       ]}
     >
-      <div className="decisionsContainer">
-        <Layout>
+      <Layout>
         <Layout.Section>
           <BlockStack gap="200">
             {refreshError && (
@@ -516,41 +502,46 @@ export default function Index() {
 
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
-            <BlockStack gap="300">
-              <div className="summarySection">
-                <InlineStack gap="400" wrap={false}>
-                  <div className="summaryCardWrapper">
-                    <Card>
-                      <BlockStack gap="200">
-                        <div className="kicker">Momentum</div>
-                        <InlineStack align="space-between" blockAlign="center">
-                          <Text as="p" variant="bodyMd">
-                            {getMomentumLine()}
-                          </Text>
-                          {getMomentumBadge()}
-                        </InlineStack>
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          Outcomes show only after the evaluation window. No claims, just Before → After.
+            <BlockStack gap="400">
+              <Layout>
+                <Layout.Section oneHalf>
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Momentum
+                      </Text>
+                      <InlineStack align="space-between" blockAlign="center">
+                        <Text as="p" variant="bodyMd">
+                          {getMomentumLine()}
                         </Text>
-                      </BlockStack>
-                    </Card>
-                  </div>
-                  <div className="summaryCardWrapper">
-                    <Card>
-                      <BlockStack gap="200">
-                        <div className="kicker">This run</div>
-                        <InlineStack gap="200" wrap>
-                          {getRunBadges()}
-                          <Badge>Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month</Badge>
-                        </InlineStack>
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          If nothing meets your threshold, this page stays quiet by design.
-                        </Text>
-                      </BlockStack>
-                    </Card>
-                  </div>
-                </InlineStack>
-              </div>
+                        {getMomentumBadge()}
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Outcomes show only after the evaluation window. No claims, just Before → After.
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+                <Layout.Section oneHalf>
+                  <Card>
+                    <BlockStack gap="200">
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        This run
+                      </Text>
+                      <InlineStack gap="200" wrap>
+                        {getRunBadges()}
+                        <Badge tone="subdued">
+                          Minimum impact: {currencySymbol}
+                          {minImpactThreshold.toFixed(0)}/month
+                        </Badge>
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        If nothing meets your threshold, this page stays quiet by design.
+                      </Text>
+                    </BlockStack>
+                  </Card>
+                </Layout.Section>
+              </Layout>
 
               <Card>
                 <BlockStack gap="400">
@@ -631,6 +622,8 @@ export default function Index() {
               </Card>
             </BlockStack>
           )}
+
+          {!shouldAutoRefresh && <Box paddingBlockStart="300" />}
 
           {decisions.length === 0 ? (
             <Card>
@@ -800,7 +793,6 @@ export default function Index() {
           )}
         </Layout.Section>
       </Layout>
-      </div>
     </Page>
   );
 }

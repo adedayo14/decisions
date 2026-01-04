@@ -9,11 +9,13 @@
 .summaryRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  gap: 12px;
+  align-items: stretch;
 }
 
 .summaryRow__panel {
   display: flex;
+  min-width: 0;
 }
 
 .summaryRow__panel .Polaris-Card {

@@ -291,12 +291,12 @@ export default function Index() {
 
   const getMomentumLine = () => {
     if (doneDecisionsCount > 0 && evaluatedOutcomesCount === 0) {
-      return `You acted on ${doneDecisionsCount} decisions. Outcomes are still evaluating.`;
+      return `${doneDecisionsCount} decisions acted on · Evaluating`;
     }
     if (doneDecisionsCount > 0) {
-      return `You acted on ${doneDecisionsCount} decisions, ${improvedDecisionsCount} improved.`;
+      return `${doneDecisionsCount} decisions acted on · ${improvedDecisionsCount} improved`;
     }
-    return "No actions yet.";
+    return "No actions yet";
   };
 
   const getMomentumBadge = () => {
@@ -326,6 +326,12 @@ export default function Index() {
     let alternative = actionTitle.slice(idx + marker.length).trim();
 
     if (alternative.endsWith(")")) alternative = alternative.slice(0, -1).trim();
+
+    // Shorten "raise price by" to just the amount with +
+    const priceMatch = alternative.match(/raise price by (.*?) per unit/);
+    if (priceMatch) {
+      return { primary, alternative: `Alternative: +${priceMatch[1]} per unit` };
+    }
 
     return { primary, alternative: alternative ? `Alternative: ${alternative}` : null };
   };
@@ -462,7 +468,7 @@ export default function Index() {
   return (
     <Page
       title="Decisions"
-      subtitle="Showing only decisions worth your attention."
+      subtitle="Only surfacing actions worth taking."
       fullWidth
       primaryAction={{
         content: isRefreshing ? "Analyzing..." : "Refresh analysis",
@@ -507,9 +513,11 @@ export default function Index() {
                 <div className="summaryRow__panel">
                   <Card className="summaryCard">
                     <BlockStack gap="200">
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Momentum
-                      </Text>
+                      <div className="sectionHeader">
+                        <Text as="p" variant="bodyMd">
+                          Momentum
+                        </Text>
+                      </div>
                       <InlineStack align="space-between" blockAlign="center">
                         <Text as="p" variant="bodyMd">
                           {getMomentumLine()}
@@ -517,7 +525,7 @@ export default function Index() {
                         {getMomentumBadge()}
                       </InlineStack>
                       <Text as="p" variant="bodySm" tone="subdued">
-                        Outcomes show only after the evaluation window. No claims, just Before → After.
+                        Outcomes show after evaluation. No claims, just Before → After.
                       </Text>
                     </BlockStack>
                   </Card>
@@ -525,9 +533,11 @@ export default function Index() {
                 <div className="summaryRow__panel">
                   <Card className="summaryCard">
                     <BlockStack gap="200">
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        This run
-                      </Text>
+                      <div className="sectionHeader">
+                        <Text as="p" variant="bodyMd">
+                          This Run
+                        </Text>
+                      </div>
                       <InlineStack gap="200" wrap>
                         {getRunBadges()}
                         <Badge tone="subdued">
@@ -536,7 +546,7 @@ export default function Index() {
                         </Badge>
                       </InlineStack>
                       <Text as="p" variant="bodySm" tone="subdued">
-                        If nothing meets your threshold, this page stays quiet by design.
+                        Quiet by design when nothing meets threshold.
                       </Text>
                     </BlockStack>
                   </Card>
@@ -620,7 +630,7 @@ export default function Index() {
           {decisions.length === 0 ? (
             <Card>
               <EmptyState
-                heading={isRefreshing ? "Analysing your data..." : "No decisions yet"}
+                heading={isRefreshing ? "Analysing data" : "No decisions"}
                 image=""
                 action={{
                   content: "Refresh analysis",
@@ -628,27 +638,24 @@ export default function Index() {
                   loading: isRefreshing,
                 }}
                 secondaryAction={{
-                  content: "Update settings",
+                  content: "Settings",
                   url: settingsUrl,
                 }}
               >
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  {isRefreshing
-                    ? "Analysing your Shopify orders..."
-                    : lastAnalyzedAt && orderCount > 0
-                    ? `We analysed ${orderCount} orders from the last 90 days. Nothing met your ${currencySymbol}${minImpactThreshold.toFixed(0)}/month threshold.`
-                    : "We haven't analysed your data yet."}
-                </Text>
-                {!isRefreshing && lastAnalyzedAt && orderCount >= minOrdersRequired && (
+                <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    That's a good sign. We'll surface anything worth acting on as new orders come in.
+                    {isRefreshing
+                      ? "Analysing your orders..."
+                      : lastAnalyzedAt && orderCount > 0
+                      ? `Analysed ${orderCount} orders from the last 90 days. Nothing met your ${currencySymbol}${minImpactThreshold.toFixed(0)}/month threshold. That's a good sign.`
+                      : "No analysis yet. Click Refresh to start."}
                   </Text>
-                )}
-                {!isRefreshing && lastAnalyzedAt && (
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    You can change the threshold in Settings.
-                  </Text>
-                )}
+                  {!isRefreshing && lastAnalyzedAt && (
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Adjust threshold in Settings if needed.
+                    </Text>
+                  )}
+                </BlockStack>
               </EmptyState>
             </Card>
           ) : (

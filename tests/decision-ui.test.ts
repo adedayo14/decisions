@@ -11,6 +11,6 @@ test("buildOutcomeMetricsLine formats baseline and post metrics", () => {
 
   assert.equal(
     line,
-    "Profit per order: -£0.26 → £0.18 · Refund rate: 12% → 6% · Shipping loss per order: £1.10 → £0.60"
+    "Profit/order: -£0.26 → £0.18 · Refund rate: 12% → 6% · Shipping loss/order: £1.10 → £0.60"
   );
 });

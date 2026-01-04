@@ -4,6 +4,11 @@ export interface OutcomeMetrics {
   shippingLossPerOrder?: number;
 }
 
+function formatSignedCurrency(value: number, currencySymbol: string) {
+  const formatted = `${currencySymbol}${Math.abs(value).toFixed(2)}`;
+  return value < 0 ? `-${formatted}` : formatted;
+}
+
 export function buildOutcomeMetricsLine(
   baseline: OutcomeMetrics,
   post: OutcomeMetrics,
@@ -12,32 +17,28 @@ export function buildOutcomeMetricsLine(
   if (!baseline || !post) return null;
 
   const parts: string[] = [];
-  const formatSignedCurrency = (value: number) => {
-    const formatted = `${currencySymbol}${Math.abs(value).toFixed(2)}`;
-    return value < 0 ? `-${formatted}` : formatted;
-  };
 
   if (baseline.netProfitPerOrder !== undefined && post.netProfitPerOrder !== undefined) {
     parts.push(
-      `Profit per order: ${formatSignedCurrency(baseline.netProfitPerOrder)} → ${formatSignedCurrency(
-        post.netProfitPerOrder
+      `Profit/order: ${formatSignedCurrency(baseline.netProfitPerOrder, currencySymbol)} → ${formatSignedCurrency(
+        post.netProfitPerOrder,
+        currencySymbol
       )}`
     );
   }
 
   if (baseline.refundRate !== undefined && post.refundRate !== undefined) {
-    parts.push(
-      `Refund rate: ${baseline.refundRate.toFixed(0)}% → ${post.refundRate.toFixed(0)}%`
-    );
+    parts.push(`Refund rate: ${baseline.refundRate.toFixed(0)}% → ${post.refundRate.toFixed(0)}%`);
   }
 
   if (baseline.shippingLossPerOrder !== undefined && post.shippingLossPerOrder !== undefined) {
     parts.push(
-      `Shipping loss per order: ${formatSignedCurrency(
-        baseline.shippingLossPerOrder
-      )} → ${formatSignedCurrency(post.shippingLossPerOrder)}`
+      `Shipping loss/order: ${formatSignedCurrency(
+        baseline.shippingLossPerOrder,
+        currencySymbol
+      )} → ${formatSignedCurrency(post.shippingLossPerOrder, currencySymbol)}`
     );
   }
 
-  return parts.length > 0 ? parts.join(" · ") : null;
+  return parts.length ? parts.join(" · ") : null;
 }

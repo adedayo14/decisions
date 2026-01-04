@@ -306,16 +306,34 @@ export default function Index() {
     return <Badge tone="subdued">No actions yet</Badge>;
   };
 
+  const formatImpactHeadline = (impact: number) => {
+    const rounded = Math.round(impact);
+    return `${currencySymbol}${rounded}/month at risk`;
+  };
+
+  const splitAlternativeAction = (actionTitle: string) => {
+    const marker = " (or ";
+    const idx = actionTitle.indexOf(marker);
+    if (idx === -1) return { primary: actionTitle, alternative: null as string | null };
+
+    const primary = actionTitle.slice(0, idx).trim();
+    let alternative = actionTitle.slice(idx + marker.length).trim();
+
+    if (alternative.endsWith(")")) alternative = alternative.slice(0, -1).trim();
+
+    return { primary, alternative: alternative ? `Alternative: ${alternative}` : null };
+  };
+
   const getRunBadges = () => {
     const badges: JSX.Element[] = [];
     badges.push(
-      <Badge key="count" tone="info">
+      <Badge key="count" tone="subdued">
         {decisions.length} decision{decisions.length === 1 ? "" : "s"} surfaced
       </Badge>
     );
     if (filters.confidence !== "all") {
       badges.push(
-        <Badge key="confidence" tone="info">
+        <Badge key="confidence" tone="subdued">
           {filters.confidence} confidence
         </Badge>
       );
@@ -499,7 +517,7 @@ export default function Index() {
                       {getMomentumBadge()}
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Outcomes show only after the evaluation window. No claims, just Before to After.
+                      Outcomes show only after the evaluation window. No claims, just Before → After.
                     </Text>
                   </BlockStack>
                 </Card>
@@ -510,7 +528,7 @@ export default function Index() {
                     </Text>
                     <InlineStack gap="200" wrap={true}>
                       {getRunBadges()}
-                      <Badge tone="info">
+                      <Badge tone="subdued">
                         Minimum impact: {currencySymbol}{minImpactThreshold.toFixed(0)}/month
                       </Badge>
                     </InlineStack>
@@ -666,36 +684,53 @@ export default function Index() {
                   <BlockStack gap="400">
                     <InlineStack align="space-between" blockAlign="center" wrap={true}>
                       <Text as="h2" variant="headingLg">
-                        {decision.headline}
+                        {formatImpactHeadline(decision.impact)}
                       </Text>
                       {getConfidenceBadge(decision.confidence)}
                     </InlineStack>
 
-                    <BlockStack gap="200">
-                      <Text as="p" variant="headingMd">
-                        {decision.actionTitle}
-                      </Text>
-                      <Text as="p" variant="bodyMd" tone="subdued">
-                        {decision.reason}
-                      </Text>
-                      {decision.dataJson?.whyNowMessage && (
-                        <Badge tone="attention">This got worse in the last 30 days.</Badge>
-                      )}
-                      {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          You ignored this earlier. The impact has grown from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to {formatCurrency(decision.impact)}.
-                        </Text>
-                      )}
-                    </BlockStack>
+                    {(() => {
+                      const { primary, alternative } = splitAlternativeAction(decision.actionTitle);
+
+                      return (
+                        <BlockStack gap="200">
+                          <Text as="p" variant="headingMd">
+                            {primary}
+                          </Text>
+                          {alternative && (
+                            <InlineStack gap="200" wrap={true}>
+                              <Badge tone="subdued">{alternative}</Badge>
+                            </InlineStack>
+                          )}
+                          <Text as="p" variant="bodyMd" tone="subdued">
+                            {decision.reason}
+                          </Text>
+
+                          {decision.dataJson?.whyNowMessage && (
+                            <InlineStack>
+                              <Badge tone="attention">This got worse in the last 30 days</Badge>
+                            </InlineStack>
+                          )}
+
+                          {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              You ignored this earlier. Impact grew from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to{" "}
+                              {formatCurrency(decision.impact)}.
+                            </Text>
+                          )}
+                        </BlockStack>
+                      );
+                    })()}
 
                     {decision.outcome?.metricsLine && (
                       <BlockStack gap="100">
                         <Text as="p" variant="bodySm" tone="subdued">
                           {decision.outcome.metricsLine}
                         </Text>
+
                         {decision.outcome?.status === "improved" && (
                           <Text as="p" variant="bodySm" tone="success">
-                            Verdict: improved over 30 days.
+                            Verdict: improved over {decision.dataJson?.windowDays ?? 30} days.
                           </Text>
                         )}
                         {decision.outcome?.status === "no_change" && (
@@ -705,7 +740,7 @@ export default function Index() {
                         )}
                         {decision.outcome?.status === "worsened" && (
                           <Text as="p" variant="bodySm" tone="critical">
-                            Verdict: worsened over 30 days.
+                            Verdict: worsened over {decision.dataJson?.windowDays ?? 30} days.
                           </Text>
                         )}
                       </BlockStack>
@@ -717,17 +752,17 @@ export default function Index() {
                       </Text>
                     )}
 
-                    <InlineStack gap="200">
-                      <Button
-                        variant="primary"
-                        onClick={() => handleMarkDone(decision.id)}
-                      >
-                        Mark as Done
+                    <InlineStack gap="200" wrap={true}>
+                      <Button variant="primary" onClick={() => handleMarkDone(decision.id)}>
+                        Mark as done
                       </Button>
-                      <Button onClick={() => handleMarkIgnored(decision.id)}>
+
+                      <Button variant="tertiary" onClick={() => handleMarkIgnored(decision.id)}>
                         Ignore
                       </Button>
+
                       <Button
+                        variant="tertiary"
                         onClick={() => toggleNumbers(decision.id)}
                         disclosure={expandedDecisions.has(decision.id) ? "up" : "down"}
                       >

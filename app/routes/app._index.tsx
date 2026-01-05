@@ -332,6 +332,16 @@ export default function Index() {
     return { primary, alternative: alternative ? `Alternative: ${alternative}` : null };
   };
 
+  const formatReason = (reason: string) => {
+    if (!reason) return reason;
+    let simplified = reason.replace(/\([^)]*\)/g, "");
+    simplified = simplified.replace(/[£$€]\s?\d[\d,]*(\.\d{1,2})?/g, "");
+    simplified = simplified.replace(/\s{2,}/g, " ").trim();
+    if (!simplified) return reason;
+    if (!simplified.endsWith(".")) return `${simplified}.`;
+    return simplified;
+  };
+
   const getCurrentExposureImpact = () => {
     if (decisions.length === 0) return `${currencySymbol}0/month at risk`;
     return formatImpactHeadline(decisions[0].impact);
@@ -531,7 +541,7 @@ export default function Index() {
               <Card>
                 <BlockStack gap="300">
                   <InlineStack align="space-between" wrap={false}>
-                    <Text as="h2" variant="headingMd">
+                    <Text as="p" variant="bodyMd" tone="subdued">
                       Filters
                     </Text>
                     <Button
@@ -660,12 +670,12 @@ export default function Index() {
                         </Text>
                       )}
                       <Text as="p" variant="bodyMd" tone="subdued">
-                        {decision.reason}
+                        {formatReason(decision.reason)}
                       </Text>
 
                       {decision.dataJson?.whyNowMessage && (
                         <Text as="p" variant="bodySm" tone="subdued">
-                          {decision.dataJson.whyNowMessage}
+                          This worsened in the last 30 days.
                         </Text>
                       )}
 

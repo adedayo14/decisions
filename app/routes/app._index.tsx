@@ -9,7 +9,6 @@ import {
   Text,
   Button,
   InlineStack,
-  Badge,
   Banner,
   Divider,
   Collapsible,
@@ -176,7 +175,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     currencySymbol,
     doneDecisionsCount,
     improvedDecisionsCount,
-    evaluatedOutcomesCount,
     missingCogsCount,
     filters: {
       status: statusFilter,
@@ -262,7 +260,6 @@ export default function Index() {
     orderCount,
     lastAnalyzedAt,
     cogsCount,
-    minOrdersRequired,
     minImpactThreshold,
     currencySymbol,
     doneDecisionsCount,
@@ -311,32 +308,9 @@ export default function Index() {
     window.localStorage.setItem(autoOpenKey, "true");
   }, [decisions]);
 
-  const getMomentumLine = () => {
-    if (doneDecisionsCount > 0 && evaluatedOutcomesCount === 0) {
-      return `${doneDecisionsCount} decisions acted on · Evaluating`;
-    }
-    if (doneDecisionsCount > 0) {
-      return `${doneDecisionsCount} decisions acted on · ${improvedDecisionsCount} improved`;
-    }
-    return "No actions yet";
-  };
-
-  const getMomentumBadge = () => {
-    if (improvedDecisionsCount > 0) {
-      return <Badge tone="success">Improving</Badge>;
-    }
-    if (doneDecisionsCount > 0) {
-      return <Badge tone="attention">Evaluating</Badge>;
-    }
-    return <Badge tone="subdued">No actions yet</Badge>;
-  };
-
-  const splitImpactHeadline = (impact: number) => {
+  const formatImpactHeadline = (impact: number) => {
     const rounded = Math.round(impact);
-    return {
-      amount: `${currencySymbol}${rounded}`,
-      suffix: "/month at risk",
-    };
+    return `${currencySymbol}${rounded}/month at risk`;
   };
 
   const splitAlternativeAction = (actionTitle: string) => {
@@ -358,21 +332,34 @@ export default function Index() {
     return { primary, alternative: alternative ? `Alternative: ${alternative}` : null };
   };
 
-  const getRunBadges = () => {
-    const badges: JSX.Element[] = [];
-    badges.push(
-      <Badge key="count" tone="subdued">
-        {decisions.length} decision{decisions.length === 1 ? "" : "s"} shown
-      </Badge>
-    );
-    if (filters.confidence !== "all") {
-      badges.push(
-        <Badge key="confidence" tone="subdued">
-          {filters.confidence} confidence
-        </Badge>
-      );
+  const getCurrentExposureImpact = () => {
+    if (decisions.length === 0) return `${currencySymbol}0/month at risk`;
+    return formatImpactHeadline(decisions[0].impact);
+  };
+
+  const getStatusLine = () => {
+    if (improvedDecisionsCount > 0) {
+      return `Status: Improving. ${improvedDecisionsCount} outcome${improvedDecisionsCount === 1 ? "" : "s"} improved.`;
     }
-    return badges;
+    if (doneDecisionsCount > 0) {
+      return `Status: Evaluating outcomes from ${doneDecisionsCount} action${doneDecisionsCount === 1 ? "" : "s"}.`;
+    }
+    if (decisions.length > 0) {
+      return "Status: Monitoring. Actions available.";
+    }
+    return "Status: Monitoring. No actions needed.";
+  };
+
+  const getCadenceLine = () => {
+    if (!lastAnalyzedAt) {
+      return "Next automatic refresh in 1 day.";
+    }
+    const analyzedAt = new Date(lastAnalyzedAt);
+    const daysSince = Math.max(
+      0,
+      Math.round((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    return `Last analysed ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
   };
 
   // Automatic refresh when page loads with no prior analysis
@@ -410,19 +397,6 @@ export default function Index() {
     params.set(key, value);
     setSearchParams(params);
   }, [searchParams, setSearchParams]);
-
-  const getConfidenceBadge = (confidence: string) => {
-    switch (confidence) {
-      case "high":
-        return <Badge tone="success">High confidence</Badge>;
-      case "medium":
-        return <Badge tone="attention">Medium confidence</Badge>;
-      case "low":
-        return <Badge>Low confidence</Badge>;
-      default:
-        return null;
-    }
-  };
 
   const formatCurrency = (value: number) => {
     return `${currencySymbol}${Math.abs(value).toFixed(2)}`;
@@ -490,7 +464,7 @@ export default function Index() {
   return (
     <Page
       title="Decisions"
-      subtitle="Only surfacing actions worth taking."
+      subtitle="We monitor margins continuously and only interrupt when the numbers justify it."
       fullWidth
       primaryAction={{
         content: isRefreshing ? "Analyzing..." : "Refresh analysis",
@@ -520,16 +494,15 @@ export default function Index() {
             )}
             {missingCogsCount > 0 && (
               <Banner tone="warning">
-                <Text as="p" variant="bodyMd">
-                  {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} missing cost. These were excluded from profit decisions. Add COGS to improve accuracy.
+                <Text as="p" variant="bodySm">
+                  Some products are missing cost data. {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} were excluded from profit decisions. Add COGS to increase accuracy.
                 </Text>
               </Banner>
             )}
             {showCogsWarning && (
               <Banner tone="warning">
-                <Text as="p" variant="bodyMd">
-                  No product costs found. Add costs in Shopify or upload a CSV to unlock profit-based
-                  decisions.
+                <Text as="p" variant="bodySm">
+                  No cost data yet. Add COGS in Shopify or upload a CSV to improve profit accuracy.
                 </Text>
               </Banner>
             )}
@@ -538,52 +511,25 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="400">
-              <div className="summaryRow">
-                <div className="summaryRow__panel">
-                  <Card className="summaryCard">
-                    <BlockStack gap="200">
-                      <div className="sectionHeader">
-                        <Text as="p" variant="bodyMd">
-                          Momentum
-                        </Text>
-                      </div>
-                      <InlineStack align="space-between" blockAlign="center">
-                        <Text as="p" variant="bodyMd">
-                          {getMomentumLine()}
-                        </Text>
-                        {getMomentumBadge()}
-                      </InlineStack>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Outcomes show after evaluation. No claims, just Before → After.
-                      </Text>
-                    </BlockStack>
-                  </Card>
-                </div>
-                <div className="summaryRow__panel">
-                  <Card className="summaryCard">
-                    <BlockStack gap="200">
-                      <div className="sectionHeader">
-                        <Text as="p" variant="bodyMd">
-                          This Run
-                        </Text>
-                      </div>
-                      <InlineStack gap="200" wrap>
-                        {getRunBadges()}
-                        <Badge tone="subdued">
-                          Minimum impact: {currencySymbol}
-                          {minImpactThreshold.toFixed(0)}/month
-                        </Badge>
-                      </InlineStack>
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Quiet by design when nothing meets threshold.
-                      </Text>
-                    </BlockStack>
-                  </Card>
-                </div>
-              </div>
+              <Card>
+                <BlockStack gap="200">
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Current exposure
+                  </Text>
+                  <Text as="p" variant="headingXl">
+                    {getCurrentExposureImpact()}
+                  </Text>
+                  <Text as="p" variant="bodyMd">
+                    {getStatusLine()}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {getCadenceLine()}
+                  </Text>
+                </BlockStack>
+              </Card>
 
               <Card>
-                <BlockStack gap="400">
+                <BlockStack gap="300">
                   <InlineStack align="space-between" wrap={false}>
                     <Text as="h2" variant="headingMd">
                       Filters
@@ -601,7 +547,7 @@ export default function Index() {
                     id="filters"
                     transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
                   >
-                    <BlockStack gap="400">
+                    <BlockStack gap="300">
                       <div className="filtersGrid">
                         <Select
                           label="Status"
@@ -659,7 +605,7 @@ export default function Index() {
           {decisions.length === 0 ? (
             <Card>
               <EmptyState
-                heading={isRefreshing ? "Analysing data" : "No decisions"}
+                heading={isRefreshing ? "Analysing data" : "No actions worth taking"}
                 image=""
                 action={{
                   content: "Refresh analysis",
@@ -676,12 +622,17 @@ export default function Index() {
                     {isRefreshing
                       ? "Analysing your orders..."
                       : lastAnalyzedAt && orderCount > 0
-                      ? `Analysed ${orderCount} orders from the last 90 days. Nothing met your ${currencySymbol}${minImpactThreshold.toFixed(0)}/month threshold. That's a good sign.`
-                      : "No analysis yet. Click Refresh to start."}
+                      ? `We analysed ${orderCount} orders from the last 90 days and found no material profit leaks.`
+                      : "We have not analysed your data yet."}
                   </Text>
                   {!isRefreshing && lastAnalyzedAt && (
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      This is a healthy state. We will surface new actions automatically if this changes.
+                    </Text>
+                  )}
+                  {!isRefreshing && (
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Adjust threshold in Settings if needed.
+                      Only decisions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month are shown. You can change this in Settings.
                     </Text>
                   )}
                 </BlockStack>
@@ -689,38 +640,33 @@ export default function Index() {
             </Card>
           ) : (
             <BlockStack gap="400">
-              {decisions.map((decision) => {
-                const { amount, suffix } = splitImpactHeadline(decision.impact);
+              {decisions.slice(0, 3).map((decision) => {
                 const { primary, alternative } = splitAlternativeAction(decision.actionTitle);
 
                 return (
                 <Card key={decision.id}>
                   <BlockStack gap="400">
-                    <InlineStack align="space-between" blockAlign="start" wrap={true}>
-                      <div>
-                        <h2 className="impactHeadline">
-                          {amount}
-                          <span className="impactSubtext">{suffix}</span>
-                        </h2>
-                      </div>
-                      {getConfidenceBadge(decision.confidence)}
-                    </InlineStack>
+                    <Text as="p" variant="headingXl">
+                      {formatImpactHeadline(decision.impact)}
+                    </Text>
 
                     <BlockStack gap="200">
-                      <Text as="h3" variant="headingLg">
+                      <Text as="p" variant="headingMd">
                         {primary}
                       </Text>
                       {alternative && (
-                        <div className="badgeRow">
-                          <Badge tone="subdued">{alternative}</Badge>
-                        </div>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {alternative}
+                        </Text>
                       )}
-                      <div className="metaLine">{decision.reason}</div>
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        {decision.reason}
+                      </Text>
 
                       {decision.dataJson?.whyNowMessage && (
-                        <div className="badgeRow">
-                          <Badge tone="attention">{decision.dataJson.whyNowMessage}</Badge>
-                        </div>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {decision.dataJson.whyNowMessage}
+                        </Text>
                       )}
 
                       {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
@@ -731,25 +677,34 @@ export default function Index() {
                       )}
                     </BlockStack>
 
-                    {decision.outcome?.metricsLine && (
+                    {decision.outcome?.status && decision.outcome.status !== "tracking" && (
                       <BlockStack gap="100">
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          {decision.outcome.metricsLine}
-                        </Text>
-
+                        {decision.outcome?.storyLine && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {decision.outcome.storyLine.replace("Profit/order:", "Profit per order")}
+                          </Text>
+                        )}
+                        {decision.outcome?.metricsLine && decision.outcome.metricsLine.includes("Shipping loss/order") && (
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            {decision.outcome.metricsLine
+                              .split(" · ")
+                              .find((line: string) => line.startsWith("Shipping loss/order"))
+                              ?.replace("Shipping loss/order:", "Shipping loss per order")}
+                          </Text>
+                        )}
                         {decision.outcome?.status === "improved" && (
-                          <Text as="p" variant="bodySm" tone="success">
-                            Verdict: improved over {decision.dataJson?.windowDays ?? 30} days.
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Outcome: improved over {decision.dataJson?.windowDays ?? 30} days.
                           </Text>
                         )}
                         {decision.outcome?.status === "no_change" && (
                           <Text as="p" variant="bodySm" tone="subdued">
-                            Verdict: no clear change yet.
+                            Outcome: no clear change yet.
                           </Text>
                         )}
                         {decision.outcome?.status === "worsened" && (
-                          <Text as="p" variant="bodySm" tone="critical">
-                            Verdict: worsened over {decision.dataJson?.windowDays ?? 30} days.
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            Outcome: worsened over {decision.dataJson?.windowDays ?? 30} days.
                           </Text>
                         )}
                       </BlockStack>
@@ -768,12 +723,12 @@ export default function Index() {
                         Mark as done
                       </Button>
 
-                      <Button variant="tertiary" onClick={() => handleMarkIgnored(decision.id)}>
+                      <Button variant="plain" onClick={() => handleMarkIgnored(decision.id)}>
                         Ignore
                       </Button>
 
                       <Button
-                        variant="tertiary"
+                        variant="plain"
                         onClick={() => toggleNumbers(decision.id)}
                         disclosure={expandedDecisions.has(decision.id) ? "up" : "down"}
                       >

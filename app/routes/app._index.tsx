@@ -370,6 +370,18 @@ export default function Index() {
     return `Last analysed ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
   };
 
+  const getFreshnessLine = () => {
+    if (!lastAnalyzedAt) {
+      return "Next automatic refresh in 1 day.";
+    }
+    const analyzedAt = new Date(lastAnalyzedAt);
+    const daysSince = Math.max(
+      0,
+      Math.round((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    return `Last analysed: ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
+  };
+
   const getDecisionContextLabel = (type: string) => {
     switch (type) {
       case "best_seller_loss":
@@ -554,9 +566,11 @@ export default function Index() {
                     <div className="exposureAmount">
                       <span className="exposureValue">{getCurrentExposureImpact()}</span>
                     </div>
-                    <Text as="p" variant="bodySm" tone="subdued" className="footnote">
-                      Only actions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month are shown.
-                    </Text>
+                    <div className="exposureDivider" />
+                    <div className="exposureMeta">
+                      <span>Threshold: {currencySymbol}{minImpactThreshold.toFixed(0)}/month</span>
+                      <span>Scope: Actions only</span>
+                    </div>
                   </div>
                 </Card>
                 <Card>
@@ -569,35 +583,40 @@ export default function Index() {
                         {alertsCount} alert{alertsCount === 1 ? "" : "s"}
                       </span>
                     </div>
-                    {!hasAlerts && (
-                      <div className="monitorState">
-                        <Text as="p" variant="headingSm">
-                          No new alerts
-                        </Text>
-                        <Text as="p" variant="bodyMd" tone="subdued">
-                          No change since the last check.
-                        </Text>
-                        <Text as="p" variant="bodySm" tone="subdued" className="monitorFootnote">
-                          We keep the log for 90 days.
-                        </Text>
-                      </div>
-                    )}
-                    {hasAlerts && (
-                      <div className="monitorState">
-                        <Text as="p" variant="headingSm">
-                          Changes detected
-                        </Text>
-                        <Button variant="plain" onClick={() => setShowAlerts(true)}>
-                          View alerts
-                        </Button>
-                      </div>
-                    )}
+                    <div className="monitorAlertBox">
+                      {!hasAlerts && (
+                        <>
+                          <Text as="p" variant="headingSm">
+                            No new alerts
+                          </Text>
+                          <Text as="p" variant="bodyMd" tone="subdued">
+                            No change since the last check.
+                          </Text>
+                          <Text as="p" variant="bodySm" tone="subdued">
+                            We keep the log for 90 days.
+                          </Text>
+                        </>
+                      )}
+                      {hasAlerts && (
+                        <>
+                          <Text as="p" variant="headingSm">
+                            New alerts
+                          </Text>
+                          <Text as="p" variant="bodyMd" tone="subdued">
+                            Something changed since the last check.
+                          </Text>
+                          <Button variant="plain" onClick={() => setShowAlerts(true)}>
+                            View alerts
+                          </Button>
+                        </>
+                      )}
+                    </div>
                     <div className="monitorRows">
                       <Text as="p" variant="bodySm" tone="subdued">
                         {getStatusLine()}
                       </Text>
                       <Text as="p" variant="bodySm" tone="subdued">
-                        {getCadenceLine()}
+                        {getFreshnessLine()}
                       </Text>
                       <Text as="p" variant="bodySm" tone="subdued">
                         Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}

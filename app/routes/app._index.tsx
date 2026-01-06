@@ -615,13 +615,13 @@ export default function Index() {
                       )}
                     </div>
                     <div className="monitorRows">
-                      <Text as="p" variant="bodySm" tone="subdued">
+                      <Text as="p" variant="bodySm" tone="subdued" className="monitorRow">
                         {getStatusLine()}
                       </Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
+                      <Text as="p" variant="bodySm" tone="subdued" className="monitorRow">
                         {getFreshnessLine()}
                       </Text>
-                      <Text as="p" variant="bodySm" tone="subdued">
+                      <Text as="p" variant="bodySm" tone="subdued" className="monitorRow monitorRow--full">
                         Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
                         <Button variant="plain" url={settingsUrl}>
                           Add COGS

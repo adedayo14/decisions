@@ -386,14 +386,19 @@ export default function Index() {
   const getImpactLabel = (confidence: string) => {
     switch (confidence) {
       case "high":
-        return "High confidence";
+        return "High impact";
       case "medium":
-        return "Medium confidence";
+        return "Medium impact";
       case "low":
-        return "Low confidence";
+        return "Low impact";
       default:
-        return "Confidence";
+        return "Impact";
     }
+  };
+
+  const formatConfidenceLabel = (confidence: string) => {
+    if (!confidence) return "Unknown";
+    return confidence.charAt(0).toUpperCase() + confidence.slice(1);
   };
 
   // Automatic refresh when page loads with no prior analysis
@@ -489,6 +494,9 @@ export default function Index() {
             </Text>
           )}
         <Text as="p" variant="bodySm" tone="subdued">
+          Confidence: {formatConfidenceLabel(decision.confidence)}
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
           Note: Refunds are counted when processed, not when originally ordered. Shipping is estimated per order using your assumption and split across items.
         </Text>
       </BlockStack>
@@ -532,20 +540,6 @@ export default function Index() {
                 </Text>
               </Banner>
             )}
-            {missingCogsCount > 0 && (
-              <Banner tone="warning" className="infoBanner">
-                <Text as="p" variant="bodySm">
-                  Some products are missing cost data. {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} were excluded from profit decisions. Add COGS to increase accuracy.
-                </Text>
-              </Banner>
-            )}
-            {showCogsWarning && (
-              <Banner tone="warning" className="infoBanner">
-                <Text as="p" variant="bodySm">
-                  No cost data yet. Add COGS in Shopify or upload a CSV to improve profit accuracy.
-                </Text>
-              </Banner>
-            )}
           </BlockStack>
 
           {/* v2: Filters and Sorting */}
@@ -560,12 +554,6 @@ export default function Index() {
                     <div className="exposureAmount">
                       <span className="exposureValue">{getCurrentExposureImpact()}</span>
                     </div>
-                    <Text as="p" variant="bodyMd" className="metaLine">
-                      {getStatusLine()}
-                    </Text>
-                    <Text as="p" variant="bodyMd" className="metaLine">
-                      {getCadenceLine()}
-                    </Text>
                     <Text as="p" variant="bodySm" tone="subdued" className="footnote">
                       Only actions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month are shown.
                     </Text>
@@ -587,7 +575,10 @@ export default function Index() {
                           No new alerts
                         </Text>
                         <Text as="p" variant="bodyMd" tone="subdued">
-                          Your exposure has not changed since the last analysis. Any new changes will appear here.
+                          No change since the last check.
+                        </Text>
+                        <Text as="p" variant="bodySm" tone="subdued" className="monitorFootnote">
+                          We keep the log for 90 days.
                         </Text>
                       </div>
                     )}
@@ -601,6 +592,20 @@ export default function Index() {
                         </Button>
                       </div>
                     )}
+                    <div className="monitorRows">
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        {getStatusLine()}
+                      </Text>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        {getCadenceLine()}
+                      </Text>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
+                        <Button variant="plain" url={settingsUrl}>
+                          Add COGS
+                        </Button>
+                      </Text>
+                    </div>
                   </div>
                 </Card>
               </div>
@@ -723,18 +728,21 @@ export default function Index() {
                 return (
                   <Card key={decision.id}>
                     <div className="cardInner decisionCard">
-                      <div className="decisionTop">
-                        <Text as="p" variant="bodySm" tone="subdued" className="decisionContext">
-                          {getDecisionContextLabel(decision.type)}
-                        </Text>
-                        <span className="impactPill">{getImpactLabel(decision.confidence)}</span>
-                      </div>
-                      <Text as="p" variant="headingXl" className="decisionAmount">
-                        {formatImpactHeadline(decision.impact)}
+                    <div className="decisionTop">
+                      <Text as="p" variant="bodySm" tone="subdued" className="decisionContext">
+                        {getDecisionContextLabel(decision.type)}
                       </Text>
-                      <Text as="p" variant="headingLg" className="decisionTitle">
-                        {primary}
-                      </Text>
+                      <span className="impactPill">{getImpactLabel(decision.confidence)}</span>
+                    </div>
+                    <Text as="p" variant="headingXl" className="decisionAmount">
+                      {formatImpactHeadline(decision.impact)}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued" className="decisionConfidence">
+                      Confidence: {formatConfidenceLabel(decision.confidence)}
+                    </Text>
+                    <Text as="p" variant="headingLg" className="decisionTitle">
+                      {primary}
+                    </Text>
                       {alternative && (
                         <Text as="p" variant="bodySm" tone="subdued">
                           {alternative}

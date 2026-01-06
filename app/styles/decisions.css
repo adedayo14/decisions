@@ -16,10 +16,6 @@
   }
 }
 
-.infoBanner {
-  border-radius: 12px;
-}
-
 .overviewRow {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -93,6 +89,16 @@
   padding: 16px;
 }
 
+.monitorRows {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.monitorFootnote {
+  margin-top: 6px;
+}
+
 .decisionCard {
   display: flex;
   flex-direction: column;
@@ -124,6 +130,10 @@
 
 .decisionAmount {
   margin: 8px 0 0;
+}
+
+.decisionConfidence {
+  margin: 4px 0 0;
 }
 
 .decisionTitle {

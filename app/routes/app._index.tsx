@@ -525,6 +525,7 @@ export default function Index() {
   return (
     <Page
       title="Decisions"
+      titleHidden
       subtitle="We monitor margins continuously and only interrupt when the numbers justify it."
       fullWidth
       primaryAction={{
@@ -611,15 +612,9 @@ export default function Index() {
                         </>
                       )}
                     </div>
-                    <div className="monitorList">
-                      <div className="monitorItem">
-                        <span className="monitorLabel">Status</span>
-                        <span className="monitorValue">{getStatusValue()}</span>
-                      </div>
-                      <div className="monitorItem">
-                        <span className="monitorLabel">Last analysed</span>
-                        <span className="monitorValue">{getFreshnessValue()}</span>
-                      </div>
+                    <div className="monitorMeta">
+                      <span className="monitorMetaItem">Status: {getStatusValue()}</span>
+                      <span className="monitorMetaItem">Last analysed: {getFreshnessValue()}</span>
                     </div>
                     <Text as="p" variant="bodySm" tone="subdued" className="monitorCoverage">
                       Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}

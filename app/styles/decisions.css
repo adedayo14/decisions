@@ -7,6 +7,8 @@
 .Polaris-Page__Subtitle {
   max-width: none;
   white-space: nowrap;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .Polaris-Page__Subtitle * {
@@ -130,37 +132,18 @@
   gap: 6px;
 }
 
-.monitorList {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 16px;
-  margin-top: 14px;
-}
-
-.monitorItem {
+.monitorMeta {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-@media (max-width: 720px) {
-  .monitorList {
-    grid-template-columns: 1fr;
-  }
-}
-
-.monitorLabel {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
   color: #64748b;
   font-weight: 600;
+  font-size: 13px;
 }
 
-.monitorValue {
-  color: #0f172a;
-  font-weight: 600;
-  font-size: 14px;
+.monitorMetaItem {
+  white-space: nowrap;
 }
 
 .monitorCoverage {

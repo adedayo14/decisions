@@ -525,7 +525,6 @@ export default function Index() {
   return (
     <Page
       title="Decisions"
-      titleHidden
       subtitle="We monitor margins continuously and only interrupt when the numbers justify it."
       fullWidth
       primaryAction={{
@@ -720,17 +719,17 @@ export default function Index() {
                     {isRefreshing
                       ? "Analysing your orders..."
                       : lastAnalyzedAt && orderCount > 0
-                      ? `We analysed ${orderCount} orders from the last 90 days and found no material profit leaks.`
+                      ? `We analysed ${orderCount} orders from the last 90 days. Nothing met your threshold.`
                       : "We have not analysed your data yet."}
                   </Text>
                   {!isRefreshing && lastAnalyzedAt && (
                     <Text as="p" variant="bodyMd" tone="subdued">
-                      This is a healthy state. We will surface new actions automatically if this changes.
+                      We will keep monitoring and surface new actions automatically.
                     </Text>
                   )}
                   {!isRefreshing && (
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Only decisions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month are shown. You can change this in Settings.
+                      Showing only actions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month. Change in Settings.
                     </Text>
                   )}
                 </BlockStack>

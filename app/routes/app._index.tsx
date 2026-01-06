@@ -520,7 +520,8 @@ export default function Index() {
     0
   );
   const hasAlerts = alertsCount > 0;
-  const showExposureCard = decisions.length > 1;
+  const showMonitorCard = hasAlerts || doneDecisionsCount > 0 || missingCogsCount > 0;
+  const showExposureCard = decisions.length > 1 || !showMonitorCard;
 
   return (
     <Page
@@ -536,6 +537,7 @@ export default function Index() {
         {
           content: "History",
           url: historyUrl,
+          badge: hasAlerts ? { tone: "new", content: String(alertsCount) } : undefined,
         },
         {
           content: "Settings",
@@ -558,7 +560,7 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="400">
-              <div className={`overviewRow ${showExposureCard ? "" : "overviewRow--single"}`}>
+              <div className={`overviewRow ${showExposureCard && showMonitorCard ? "" : "overviewRow--single"}`}>
                 {showExposureCard && (
                   <Card className="exposureCard">
                     <div className="cardInner">
@@ -576,53 +578,57 @@ export default function Index() {
                     </div>
                   </Card>
                 )}
-                <Card>
-                  <div className="cardInner">
-                    <div className="monitorHead">
-                      <Text as="p" variant="bodySm" tone="subdued" className="eyebrow">
-                        Monitor
-                      </Text>
-                      <span className={`pill ${hasAlerts ? "alert" : ""}`}>
-                        {alertsCount} alert{alertsCount === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <div className="monitorAlertBox">
-                      {!hasAlerts && (
-                        <>
-                          <Text as="p" variant="headingSm">
-                            Latest check
-                          </Text>
-                          <Text as="p" variant="bodyMd" tone="subdued">
-                            No change since the last check.
-                          </Text>
-                        </>
-                      )}
-                      {hasAlerts && (
-                        <>
-                          <Text as="p" variant="headingSm">
-                            New alerts
-                          </Text>
-                          <Text as="p" variant="bodyMd" tone="subdued">
-                            Something changed since the last check.
-                          </Text>
-                          <Button variant="plain" onClick={() => setShowAlerts(true)}>
-                            View alerts
+                {showMonitorCard && (
+                  <Card>
+                    <div className="cardInner">
+                      <div className="monitorHead">
+                        <Text as="p" variant="bodySm" tone="subdued" className="eyebrow">
+                          Monitor
+                        </Text>
+                        <span className={`pill ${hasAlerts ? "alert" : ""}`}>
+                          {alertsCount} alert{alertsCount === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <div className="monitorAlertBox">
+                        {!hasAlerts && (
+                          <>
+                            <Text as="p" variant="headingSm">
+                              Latest check
+                            </Text>
+                            <Text as="p" variant="bodyMd" tone="subdued">
+                              No change since the last check.
+                            </Text>
+                          </>
+                        )}
+                        {hasAlerts && (
+                          <>
+                            <Text as="p" variant="headingSm">
+                              New alerts
+                            </Text>
+                            <Text as="p" variant="bodyMd" tone="subdued">
+                              Something changed since the last check.
+                            </Text>
+                            <Button variant="plain" onClick={() => setShowAlerts(true)}>
+                              View alerts
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      <div className="monitorMeta">
+                        <span className="monitorMetaItem">Status: {getStatusValue()}</span>
+                        <span className="monitorMetaItem">Last analysed: {getFreshnessValue()}</span>
+                      </div>
+                      {missingCogsCount > 0 && (
+                        <Text as="p" variant="bodySm" tone="subdued" className="monitorCoverage">
+                          Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
+                          <Button variant="plain" url={settingsUrl}>
+                            Add COGS
                           </Button>
-                        </>
+                        </Text>
                       )}
                     </div>
-                    <div className="monitorMeta">
-                      <span className="monitorMetaItem">Status: {getStatusValue()}</span>
-                      <span className="monitorMetaItem">Last analysed: {getFreshnessValue()}</span>
-                    </div>
-                    <Text as="p" variant="bodySm" tone="subdued" className="monitorCoverage">
-                      Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
-                      <Button variant="plain" url={settingsUrl}>
-                        Add COGS
-                      </Button>
-                    </Text>
-                  </div>
-                </Card>
+                  </Card>
+                )}
               </div>
 
               <Card>
@@ -719,17 +725,17 @@ export default function Index() {
                     {isRefreshing
                       ? "Analysing your orders..."
                       : lastAnalyzedAt && orderCount > 0
-                      ? `We analysed ${orderCount} orders from the last 90 days. Nothing met your threshold.`
+                      ? `We analysed ${orderCount} orders from the last 90 days and found no material profit leaks.`
                       : "We have not analysed your data yet."}
                   </Text>
                   {!isRefreshing && lastAnalyzedAt && (
                     <Text as="p" variant="bodyMd" tone="subdued">
-                      We will keep monitoring and surface new actions automatically.
+                      We will surface new actions automatically if this changes.
                     </Text>
                   )}
                   {!isRefreshing && (
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Showing only actions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month. Change in Settings.
+                      Threshold: {currencySymbol}{minImpactThreshold.toFixed(0)}/month (change in Settings).
                     </Text>
                   )}
                 </BlockStack>

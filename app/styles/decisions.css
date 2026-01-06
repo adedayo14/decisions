@@ -118,40 +118,49 @@
 .monitorAlertBox {
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: #ffffff;
   padding: 16px;
   display: grid;
   gap: 6px;
 }
 
-.monitorRows {
+.monitorStats {
   display: grid;
-  gap: 8px;
-  margin-top: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin-top: 14px;
 }
 
-.monitorRow {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 10px;
-  align-items: start;
+.monitorStat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
-.monitorLabel {
+.monitorStat--wide {
+  grid-column: 1 / -1;
+}
+
+.monitorStatLabel {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: #64748b;
   font-weight: 600;
 }
 
-.monitorValue {
-  color: #334155;
-}
-
-.monitorRow--muted .monitorValue {
-  color: #64748b;
+.monitorStatValue {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 @media (max-width: 720px) {
-  .monitorRow {
+  .monitorStats {
     grid-template-columns: 1fr;
   }
 }

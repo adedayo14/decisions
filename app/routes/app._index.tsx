@@ -590,7 +590,7 @@ export default function Index() {
                       {!hasAlerts && (
                         <>
                           <Text as="p" variant="headingSm">
-                            No changes detected
+                            Latest check
                           </Text>
                           <Text as="p" variant="bodyMd" tone="subdued">
                             No change since the last check.
@@ -611,27 +611,27 @@ export default function Index() {
                         </>
                       )}
                     </div>
-                    <div className="monitorRows">
-                      <div className="monitorRow">
-                        <span className="monitorLabel">Status</span>
-                        <span className="monitorValue">{getStatusValue()}</span>
+                    <div className="monitorStats">
+                      <div className="monitorStat">
+                        <span className="monitorStatLabel">Status</span>
+                        <span className="monitorStatValue">{getStatusValue()}</span>
                       </div>
-                      <div className="monitorRow">
-                        <span className="monitorLabel">Last analysed</span>
-                        <span className="monitorValue">{getFreshnessValue()}</span>
+                      <div className="monitorStat">
+                        <span className="monitorStatLabel">Last analysed</span>
+                        <span className="monitorStatValue">{getFreshnessValue()}</span>
                       </div>
-                      <div className="monitorRow">
-                        <span className="monitorLabel">Data coverage</span>
-                        <span className="monitorValue">
+                      <div className="monitorStat monitorStat--wide">
+                        <span className="monitorStatLabel">Data coverage</span>
+                        <span className="monitorStatValue">
                           COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
                           <Button variant="plain" url={settingsUrl}>
                             Add COGS
                           </Button>
                         </span>
                       </div>
-                      <div className="monitorRow monitorRow--muted">
-                        <span className="monitorLabel">Log</span>
-                        <span className="monitorValue">90 days</span>
+                      <div className="monitorStat">
+                        <span className="monitorStatLabel">Log</span>
+                        <span className="monitorStatValue">90 days</span>
                       </div>
                     </div>
                   </div>

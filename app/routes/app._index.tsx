@@ -348,14 +348,14 @@ export default function Index() {
     return formatImpactHeadline(decisions[0].impact);
   };
 
-  const getStatusLine = () => {
+  const getStatusValue = () => {
     if (improvedDecisionsCount > 0) {
-      return "Status: Improving";
+      return "Improving";
     }
     if (doneDecisionsCount > 0) {
-      return `Status: Evaluating outcomes from ${doneDecisionsCount} action${doneDecisionsCount === 1 ? "" : "s"}.`;
+      return `Evaluating outcomes from ${doneDecisionsCount} action${doneDecisionsCount === 1 ? "" : "s"}.`;
     }
-    return "Status: Monitoring";
+    return "Monitoring";
   };
 
   const getCadenceLine = () => {
@@ -370,7 +370,7 @@ export default function Index() {
     return `Last analysed ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
   };
 
-  const getFreshnessLine = () => {
+  const getFreshnessValue = () => {
     if (!lastAnalyzedAt) {
       return "Next automatic refresh in 1 day.";
     }
@@ -379,7 +379,7 @@ export default function Index() {
       0,
       Math.round((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24))
     );
-    return `Last analysed: ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
+    return `${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
   };
 
   const getDecisionContextLabel = (type: string) => {
@@ -590,13 +590,10 @@ export default function Index() {
                       {!hasAlerts && (
                         <>
                           <Text as="p" variant="headingSm">
-                            No new alerts
+                            No changes detected
                           </Text>
                           <Text as="p" variant="bodyMd" tone="subdued">
                             No change since the last check.
-                          </Text>
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            We keep the log for 90 days.
                           </Text>
                         </>
                       )}
@@ -615,18 +612,27 @@ export default function Index() {
                       )}
                     </div>
                     <div className="monitorRows">
-                      <Text as="p" variant="bodySm" tone="subdued" className="monitorRow">
-                        {getStatusLine()}
-                      </Text>
-                      <Text as="p" variant="bodySm" tone="subdued" className="monitorRow">
-                        {getFreshnessLine()}
-                      </Text>
-                      <Text as="p" variant="bodySm" tone="subdued" className="monitorRow monitorRow--full">
-                        Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
-                        <Button variant="plain" url={settingsUrl}>
-                          Add COGS
-                        </Button>
-                      </Text>
+                      <div className="monitorRow">
+                        <span className="monitorLabel">Status</span>
+                        <span className="monitorValue">{getStatusValue()}</span>
+                      </div>
+                      <div className="monitorRow">
+                        <span className="monitorLabel">Last analysed</span>
+                        <span className="monitorValue">{getFreshnessValue()}</span>
+                      </div>
+                      <div className="monitorRow">
+                        <span className="monitorLabel">Data coverage</span>
+                        <span className="monitorValue">
+                          COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
+                          <Button variant="plain" url={settingsUrl}>
+                            Add COGS
+                          </Button>
+                        </span>
+                      </div>
+                      <div className="monitorRow monitorRow--muted">
+                        <span className="monitorLabel">Log</span>
+                        <span className="monitorValue">90 days</span>
+                      </div>
                     </div>
                   </div>
                 </Card>

@@ -9,8 +9,13 @@
   white-space: nowrap;
 }
 
+.Polaris-Page__Subtitle * {
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
-  .Polaris-Page__Subtitle {
+  .Polaris-Page__Subtitle,
+  .Polaris-Page__Subtitle * {
     white-space: normal;
   }
 }
@@ -121,19 +126,34 @@
 
 .monitorRows {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
   margin-top: 12px;
 }
 
-@media (max-width: 720px) {
-  .monitorRows {
-    grid-template-columns: 1fr;
-  }
+.monitorRow {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  align-items: start;
 }
 
-.monitorRow--full {
-  grid-column: 1 / -1;
+.monitorLabel {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.monitorValue {
+  color: #334155;
+}
+
+.monitorRow--muted .monitorValue {
+  color: #64748b;
+}
+
+@media (max-width: 720px) {
+  .monitorRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 .decisionCard {

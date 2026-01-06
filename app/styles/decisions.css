@@ -26,6 +26,10 @@
   gap: 16px;
 }
 
+.overviewRow--single {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 860px) {
   .overviewRow {
     grid-template-columns: 1fr;
@@ -34,6 +38,11 @@
 
 .cardInner {
   padding: 22px 24px;
+}
+
+.exposureCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .eyebrow {
@@ -50,6 +59,7 @@
   font-size: 36px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: #0f172a;
 }
 
 .exposureDivider {
@@ -135,6 +145,24 @@
   background: #f1f5f9;
   color: #475569;
   border: 1px solid #e2e8f0;
+}
+
+.impactPill--high {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
+.impactPill--medium {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.impactPill--low {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
 }
 
 .decisionAmount {

@@ -520,6 +520,7 @@ export default function Index() {
     0
   );
   const hasAlerts = alertsCount > 0;
+  const showExposureCard = decisions.length > 1;
 
   return (
     <Page
@@ -557,22 +558,24 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="400">
-              <div className="overviewRow">
-                <Card>
-                  <div className="cardInner">
-                    <Text as="p" variant="bodySm" tone="subdued" className="eyebrow">
-                      Current exposure
-                    </Text>
-                    <div className="exposureAmount">
-                      <span className="exposureValue">{getCurrentExposureImpact()}</span>
+              <div className={`overviewRow ${showExposureCard ? "" : "overviewRow--single"}`}>
+                {showExposureCard && (
+                  <Card className="exposureCard">
+                    <div className="cardInner">
+                      <Text as="p" variant="bodySm" tone="subdued" className="eyebrow">
+                        Current exposure
+                      </Text>
+                      <div className="exposureAmount">
+                        <span className="exposureValue">{getCurrentExposureImpact()}</span>
+                      </div>
+                      <div className="exposureDivider" />
+                      <div className="exposureMeta">
+                        <span>Threshold: {currencySymbol}{minImpactThreshold.toFixed(0)}/month</span>
+                        <span>Scope: Actions only</span>
+                      </div>
                     </div>
-                    <div className="exposureDivider" />
-                    <div className="exposureMeta">
-                      <span>Threshold: {currencySymbol}{minImpactThreshold.toFixed(0)}/month</span>
-                      <span>Scope: Actions only</span>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
+                )}
                 <Card>
                   <div className="cardInner">
                     <div className="monitorHead">
@@ -747,12 +750,14 @@ export default function Index() {
                 return (
                   <Card key={decision.id}>
                     <div className="cardInner decisionCard">
-                    <div className="decisionTop">
-                      <Text as="p" variant="bodySm" tone="subdued" className="decisionContext">
-                        {getDecisionContextLabel(decision.type)}
-                      </Text>
-                      <span className="impactPill">{getImpactLabel(decision.confidence)}</span>
-                    </div>
+                      <div className="decisionTop">
+                        <Text as="p" variant="bodySm" tone="subdued" className="decisionContext">
+                          {getDecisionContextLabel(decision.type)}
+                        </Text>
+                        <span className={`impactPill impactPill--${decision.confidence}`}>
+                          {getImpactLabel(decision.confidence)}
+                        </span>
+                      </div>
                     <Text as="p" variant="headingXl" className="decisionAmount">
                       {formatImpactHeadline(decision.impact)}
                     </Text>

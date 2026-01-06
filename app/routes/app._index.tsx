@@ -397,13 +397,13 @@ export default function Index() {
   const getImpactLabel = (confidence: string) => {
     switch (confidence) {
       case "high":
-        return "High impact";
+        return "High confidence";
       case "medium":
-        return "Medium impact";
+        return "Medium confidence";
       case "low":
-        return "Low impact";
+        return "Low confidence";
       default:
-        return "Impact";
+        return "Confidence";
     }
   };
 
@@ -730,9 +730,6 @@ export default function Index() {
                       </div>
                     <Text as="p" variant="headingXl" className="decisionAmount">
                       {formatImpactHeadline(decision.impact)}
-                    </Text>
-                    <Text as="p" variant="bodySm" tone="subdued" className="decisionConfidence">
-                      Confidence: {formatConfidenceLabel(decision.confidence)}
                     </Text>
                     <Text as="p" variant="headingLg" className="decisionTitle">
                       {primary}

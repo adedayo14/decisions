@@ -13,7 +13,6 @@ import {
   Divider,
   Collapsible,
   DataTable,
-  EmptyState,
   Select,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
@@ -707,39 +706,11 @@ export default function Index() {
 
           {decisions.length === 0 ? (
             <Card>
-              <EmptyState
-                heading={isRefreshing ? "Analysing data" : "No actions worth taking"}
-                image=""
-                action={{
-                  content: "Refresh analysis",
-                  onAction: () => refreshFetcher.submit({}, { method: "post", action: refreshAction }),
-                  loading: isRefreshing,
-                }}
-                secondaryAction={{
-                  content: "Settings",
-                  url: settingsUrl,
-                }}
-              >
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    {isRefreshing
-                      ? "Analysing your orders..."
-                      : lastAnalyzedAt && orderCount > 0
-                      ? `We analysed ${orderCount} orders from the last 90 days and found no material profit leaks.`
-                      : "We have not analysed your data yet."}
-                  </Text>
-                  {!isRefreshing && lastAnalyzedAt && (
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      We will surface new actions automatically if this changes.
-                    </Text>
-                  )}
-                  {!isRefreshing && (
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Threshold: {currencySymbol}{minImpactThreshold.toFixed(0)}/month (change in Settings).
-                    </Text>
-                  )}
-                </BlockStack>
-              </EmptyState>
+              <BlockStack gap="200">
+                <Text as="p" variant={isRefreshing ? "headingSm" : "headingMd"}>
+                  {isRefreshing ? "Analysing data" : "No actions worth taking"}
+                </Text>
+              </BlockStack>
             </Card>
           ) : (
             <BlockStack gap="400">

@@ -13,6 +13,12 @@
   white-space: nowrap;
 }
 
+.Polaris-Page-Header__TitleWrapper,
+.Polaris-Page-Header__TitleWrapperExpand,
+.Polaris-Page-Header__AdditionalMetaData {
+  max-width: 100%;
+}
+
 @media (max-width: 900px) {
   .Polaris-Page__Subtitle,
   .Polaris-Page__Subtitle * {
@@ -124,28 +130,26 @@
   gap: 6px;
 }
 
-.monitorStats {
+.monitorList {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 16px;
+  gap: 8px 16px;
   margin-top: 14px;
 }
 
-.monitorStat {
+.monitorItem {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
 }
 
-.monitorStat--wide {
-  grid-column: 1 / -1;
+@media (max-width: 720px) {
+  .monitorList {
+    grid-template-columns: 1fr;
+  }
 }
 
-.monitorStatLabel {
+.monitorLabel {
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -153,16 +157,14 @@
   font-weight: 600;
 }
 
-.monitorStatValue {
+.monitorValue {
   color: #0f172a;
   font-weight: 600;
   font-size: 14px;
 }
 
-@media (max-width: 720px) {
-  .monitorStats {
-    grid-template-columns: 1fr;
-  }
+.monitorCoverage {
+  margin-top: 10px;
 }
 
 .decisionCard {

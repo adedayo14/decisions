@@ -611,29 +611,22 @@ export default function Index() {
                         </>
                       )}
                     </div>
-                    <div className="monitorStats">
-                      <div className="monitorStat">
-                        <span className="monitorStatLabel">Status</span>
-                        <span className="monitorStatValue">{getStatusValue()}</span>
+                    <div className="monitorList">
+                      <div className="monitorItem">
+                        <span className="monitorLabel">Status</span>
+                        <span className="monitorValue">{getStatusValue()}</span>
                       </div>
-                      <div className="monitorStat">
-                        <span className="monitorStatLabel">Last analysed</span>
-                        <span className="monitorStatValue">{getFreshnessValue()}</span>
-                      </div>
-                      <div className="monitorStat monitorStat--wide">
-                        <span className="monitorStatLabel">Data coverage</span>
-                        <span className="monitorStatValue">
-                          COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
-                          <Button variant="plain" url={settingsUrl}>
-                            Add COGS
-                          </Button>
-                        </span>
-                      </div>
-                      <div className="monitorStat">
-                        <span className="monitorStatLabel">Log</span>
-                        <span className="monitorStatValue">90 days</span>
+                      <div className="monitorItem">
+                        <span className="monitorLabel">Last analysed</span>
+                        <span className="monitorValue">{getFreshnessValue()}</span>
                       </div>
                     </div>
+                    <Text as="p" variant="bodySm" tone="subdued" className="monitorCoverage">
+                      Data coverage: COGS missing for {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} (excluded).{" "}
+                      <Button variant="plain" url={settingsUrl}>
+                        Add COGS
+                      </Button>
+                    </Text>
                   </div>
                 </Card>
               </div>

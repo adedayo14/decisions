@@ -275,6 +275,7 @@ export default function Index() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedDecisions, setExpandedDecisions] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   const isRefreshing = refreshFetcher.state !== "idle";
   const refreshError =
@@ -349,15 +350,12 @@ export default function Index() {
 
   const getStatusLine = () => {
     if (improvedDecisionsCount > 0) {
-      return `Status: Improving. ${improvedDecisionsCount} outcome${improvedDecisionsCount === 1 ? "" : "s"} improved.`;
+      return "Status: Improving";
     }
     if (doneDecisionsCount > 0) {
       return `Status: Evaluating outcomes from ${doneDecisionsCount} action${doneDecisionsCount === 1 ? "" : "s"}.`;
     }
-    if (decisions.length > 0) {
-      return "Status: Monitoring. Actions available.";
-    }
-    return "Status: Monitoring. No actions needed.";
+    return "Status: Monitoring";
   };
 
   const getCadenceLine = () => {
@@ -370,6 +368,32 @@ export default function Index() {
       Math.round((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24))
     );
     return `Last analysed ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
+  };
+
+  const getDecisionContextLabel = (type: string) => {
+    switch (type) {
+      case "best_seller_loss":
+        return "Best-seller loss (ghost winner)";
+      case "free_shipping_trap":
+        return "Free-shipping trap";
+      case "discount_refund_hit":
+        return "Discount-refund hit";
+      default:
+        return "Decision";
+    }
+  };
+
+  const getImpactLabel = (confidence: string) => {
+    switch (confidence) {
+      case "high":
+        return "High confidence";
+      case "medium":
+        return "Medium confidence";
+      case "low":
+        return "Low confidence";
+      default:
+        return "Confidence";
+    }
   };
 
   // Automatic refresh when page loads with no prior analysis
@@ -471,6 +495,12 @@ export default function Index() {
     );
   };
 
+  const alertsCount = decisions.reduce(
+    (total, decision) => total + (decision.dataJson?.alertsCount ?? 0),
+    0
+  );
+  const hasAlerts = alertsCount > 0;
+
   return (
     <Page
       title="Decisions"
@@ -503,14 +533,14 @@ export default function Index() {
               </Banner>
             )}
             {missingCogsCount > 0 && (
-              <Banner tone="warning">
+              <Banner tone="warning" className="infoBanner">
                 <Text as="p" variant="bodySm">
                   Some products are missing cost data. {missingCogsCount} product{missingCogsCount === 1 ? "" : "s"} were excluded from profit decisions. Add COGS to increase accuracy.
                 </Text>
               </Banner>
             )}
             {showCogsWarning && (
-              <Banner tone="warning">
+              <Banner tone="warning" className="infoBanner">
                 <Text as="p" variant="bodySm">
                   No cost data yet. Add COGS in Shopify or upload a CSV to improve profit accuracy.
                 </Text>
@@ -521,27 +551,64 @@ export default function Index() {
           {/* v2: Filters and Sorting */}
           {!shouldAutoRefresh && (
             <BlockStack gap="400">
-              <Card>
-                <BlockStack gap="200">
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Current exposure
-                  </Text>
-                  <Text as="p" variant="headingXl">
-                    {getCurrentExposureImpact()}
-                  </Text>
-                  <Text as="p" variant="bodyMd">
-                    {getStatusLine()}
-                  </Text>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    {getCadenceLine()}
-                  </Text>
-                </BlockStack>
-              </Card>
+              <div className="overviewRow">
+                <Card>
+                  <div className="cardInner">
+                    <Text as="p" variant="bodySm" tone="subdued" className="eyebrow">
+                      Current exposure
+                    </Text>
+                    <div className="exposureAmount">
+                      <span className="exposureValue">{getCurrentExposureImpact()}</span>
+                    </div>
+                    <Text as="p" variant="bodyMd" className="metaLine">
+                      {getStatusLine()}
+                    </Text>
+                    <Text as="p" variant="bodyMd" className="metaLine">
+                      {getCadenceLine()}
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued" className="footnote">
+                      Only actions worth at least {currencySymbol}{minImpactThreshold.toFixed(0)}/month are shown.
+                    </Text>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="cardInner">
+                    <div className="monitorHead">
+                      <Text as="p" variant="bodySm" tone="subdued" className="eyebrow">
+                        Monitor
+                      </Text>
+                      <span className={`pill ${hasAlerts ? "alert" : ""}`}>
+                        {alertsCount} alert{alertsCount === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    {!hasAlerts && (
+                      <div className="monitorState">
+                        <Text as="p" variant="headingSm">
+                          No new alerts
+                        </Text>
+                        <Text as="p" variant="bodyMd" tone="subdued">
+                          Your exposure has not changed since the last analysis. Any new changes will appear here.
+                        </Text>
+                      </div>
+                    )}
+                    {hasAlerts && (
+                      <div className="monitorState">
+                        <Text as="p" variant="headingSm">
+                          Changes detected
+                        </Text>
+                        <Button variant="plain" onClick={() => setShowAlerts(true)}>
+                          View alerts
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
 
               <Card>
                 <BlockStack gap="300">
                   <InlineStack align="space-between" wrap={false}>
-                    <Text as="p" variant="bodyMd" tone="subdued">
+                    <Text as="p" variant="bodySm" tone="subdued">
                       Filters
                     </Text>
                     <Button
@@ -654,14 +721,18 @@ export default function Index() {
                 const { primary, alternative } = splitAlternativeAction(decision.actionTitle);
 
                 return (
-                <Card key={decision.id}>
-                  <BlockStack gap="400">
-                    <Text as="p" variant="headingXl">
-                      {formatImpactHeadline(decision.impact)}
-                    </Text>
-
-                    <BlockStack gap="200">
-                      <Text as="p" variant="headingMd">
+                  <Card key={decision.id}>
+                    <div className="cardInner decisionCard">
+                      <div className="decisionTop">
+                        <Text as="p" variant="bodySm" tone="subdued" className="decisionContext">
+                          {getDecisionContextLabel(decision.type)}
+                        </Text>
+                        <span className="impactPill">{getImpactLabel(decision.confidence)}</span>
+                      </div>
+                      <Text as="p" variant="headingXl" className="decisionAmount">
+                        {formatImpactHeadline(decision.impact)}
+                      </Text>
+                      <Text as="p" variant="headingLg" className="decisionTitle">
                         {primary}
                       </Text>
                       {alternative && (
@@ -669,99 +740,104 @@ export default function Index() {
                           {alternative}
                         </Text>
                       )}
-                      <Text as="p" variant="bodyMd" tone="subdued">
+                      <Text as="p" variant="bodyMd" tone="subdued" className="decisionReason">
                         {formatReason(decision.reason)}
                       </Text>
-
                       {decision.dataJson?.whyNowMessage && (
-                        <Text as="p" variant="bodySm" tone="subdued">
-                          This worsened in the last 30 days.
+                        <Text as="p" variant="bodySm" tone="subdued" className="decisionWhyNow">
+                          Why now: {decision.dataJson.whyNowMessage || "This worsened in the last 30 days."}
                         </Text>
                       )}
 
-                      {decision.dataJson?.isResurfaced && decision.dataJson?.resurfacedFromImpact && (
+                      {decision.outcome?.status && decision.outcome.status !== "tracking" && (
+                        <BlockStack gap="100">
+                          {decision.outcome?.storyLine && (
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              {decision.outcome.storyLine.replace("Profit/order:", "Profit per order")}
+                            </Text>
+                          )}
+                          {decision.outcome?.metricsLine &&
+                            decision.outcome.metricsLine.includes("Shipping loss/order") && (
+                              <Text as="p" variant="bodySm" tone="subdued">
+                                {decision.outcome.metricsLine
+                                  .split(" · ")
+                                  .find((line: string) => line.startsWith("Shipping loss/order"))
+                                  ?.replace("Shipping loss/order:", "Shipping loss per order")}
+                              </Text>
+                            )}
+                          {decision.outcome?.status === "improved" && (
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              Outcome: improved over {decision.dataJson?.windowDays ?? 30} days.
+                            </Text>
+                          )}
+                          {decision.outcome?.status === "no_change" && (
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              Outcome: no clear change yet.
+                            </Text>
+                          )}
+                          {decision.outcome?.status === "worsened" && (
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              Outcome: worsened over {decision.dataJson?.windowDays ?? 30} days.
+                            </Text>
+                          )}
+                        </BlockStack>
+                      )}
+
+                      {decision.outcome?.status === "tracking" && (
                         <Text as="p" variant="bodySm" tone="subdued">
-                          You ignored this earlier. Impact grew from {formatCurrency(decision.dataJson.resurfacedFromImpact)} to{" "}
-                          {formatCurrency(decision.impact)}.
+                          {decision.outcome.message}
                         </Text>
                       )}
-                    </BlockStack>
 
-                    {decision.outcome?.status && decision.outcome.status !== "tracking" && (
-                      <BlockStack gap="100">
-                        {decision.outcome?.storyLine && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {decision.outcome.storyLine.replace("Profit/order:", "Profit per order")}
-                          </Text>
-                        )}
-                        {decision.outcome?.metricsLine && decision.outcome.metricsLine.includes("Shipping loss/order") && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            {decision.outcome.metricsLine
-                              .split(" · ")
-                              .find((line: string) => line.startsWith("Shipping loss/order"))
-                              ?.replace("Shipping loss/order:", "Shipping loss per order")}
-                          </Text>
-                        )}
-                        {decision.outcome?.status === "improved" && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            Outcome: improved over {decision.dataJson?.windowDays ?? 30} days.
-                          </Text>
-                        )}
-                        {decision.outcome?.status === "no_change" && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            Outcome: no clear change yet.
-                          </Text>
-                        )}
-                        {decision.outcome?.status === "worsened" && (
-                          <Text as="p" variant="bodySm" tone="subdued">
-                            Outcome: worsened over {decision.dataJson?.windowDays ?? 30} days.
-                          </Text>
-                        )}
-                      </BlockStack>
-                    )}
+                      <Divider />
 
-                    {decision.outcome?.status === "tracking" && (
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {decision.outcome.message}
-                      </Text>
-                    )}
+                      <div className="decisionActions">
+                        <Button variant="primary" onClick={() => handleMarkDone(decision.id)}>
+                          Mark as done
+                        </Button>
+                        <Button
+                          variant="plain"
+                          onClick={() => toggleNumbers(decision.id)}
+                          disclosure={expandedDecisions.has(decision.id) ? "up" : "down"}
+                        >
+                          See numbers
+                        </Button>
+                        <Button variant="plain" onClick={() => handleMarkIgnored(decision.id)}>
+                          Ignore
+                        </Button>
+                      </div>
 
-                    <Divider />
-
-                    <InlineStack gap="200" wrap={true}>
-                      <Button variant="primary" onClick={() => handleMarkDone(decision.id)}>
-                        Mark as done
-                      </Button>
-
-                      <Button variant="plain" onClick={() => handleMarkIgnored(decision.id)}>
-                        Ignore
-                      </Button>
-
-                      <Button
-                        variant="plain"
-                        onClick={() => toggleNumbers(decision.id)}
-                        disclosure={expandedDecisions.has(decision.id) ? "up" : "down"}
+                      <Collapsible
+                        open={expandedDecisions.has(decision.id)}
+                        id={`numbers-${decision.id}`}
+                        transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
                       >
-                        See numbers
-                      </Button>
-                    </InlineStack>
-
-                    <Collapsible
-                      open={expandedDecisions.has(decision.id)}
-                      id={`numbers-${decision.id}`}
-                      transition={{ duration: "200ms", timingFunction: "ease-in-out" }}
-                    >
-                      <BlockStack gap="300">
-                        <Text as="p" variant="bodyMd" tone="subdued">
-                          Detailed breakdown (last 90 days):
-                        </Text>
-                        {getNumbersTable(decision)}
-                      </BlockStack>
-                    </Collapsible>
-                  </BlockStack>
-                </Card>
-              );
+                        <BlockStack gap="300">
+                          <Text as="p" variant="bodyMd" tone="subdued">
+                            Detailed breakdown (last 90 days):
+                          </Text>
+                          {getNumbersTable(decision)}
+                        </BlockStack>
+                      </Collapsible>
+                    </div>
+                  </Card>
+                );
               })}
+            </BlockStack>
+          )}
+
+          {hasAlerts && showAlerts && (
+            <BlockStack gap="400">
+              <Card>
+                <div className="cardInner alertsCard">
+                  <Text as="p" variant="headingMd">
+                    Alerts
+                  </Text>
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    Changes logged in the last 90 days. Alerts do not require action.
+                  </Text>
+                </div>
+              </Card>
             </BlockStack>
           )}
         </Layout.Section>

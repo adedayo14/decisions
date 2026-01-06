@@ -16,6 +16,141 @@
   }
 }
 
+.infoBanner {
+  border-radius: 12px;
+}
+
+.overviewRow {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .overviewRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cardInner {
+  padding: 22px 24px;
+}
+
+.eyebrow {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.exposureAmount {
+  margin: 6px 0 12px;
+}
+
+.exposureValue {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.metaLine {
+  margin: 6px 0 0;
+}
+
+.footnote {
+  margin-top: 12px;
+}
+
+.monitorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.pill.alert {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border-color: #fee2e2;
+}
+
+.monitorState {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 16px;
+}
+
+.decisionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.decisionTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.decisionContext {
+  margin: 0;
+}
+
+.impactPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.decisionAmount {
+  margin: 8px 0 0;
+}
+
+.decisionTitle {
+  margin: 4px 0 0;
+}
+
+.decisionReason {
+  margin: 6px 0 0;
+}
+
+.decisionWhyNow {
+  margin: 4px 0 0;
+}
+
+.decisionActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.alertsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .sectionHeader {
   font-weight: 600;
   letter-spacing: 0.01em;

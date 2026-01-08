@@ -12,7 +12,7 @@ export type { PrismaClient };
 export type TypedPrismaClient = PrismaClient;
 
 // Settings model types
-export type SettingsModel = Prisma.SettingsGetPayload<{}>;
+export type SettingsModel = Prisma.SettingsGetPayload<Record<string, never>>;
 export type SettingsCreateInput = Prisma.SettingsCreateInput;
 export type SettingsUpdateInput = Prisma.SettingsUpdateInput;
 export type SettingsUpsertArgs = Prisma.SettingsUpsertArgs;
@@ -38,7 +38,7 @@ export type ExtendedSettings = SettingsModel & {
 };
 
 // Bundle model types
-export type BundleModel = Prisma.BundleGetPayload<{}>;
+export type BundleModel = Prisma.BundleGetPayload<Record<string, never>>;
 export type BundleWithProducts = Prisma.BundleGetPayload<{
   include: { products: true };
 }>;
@@ -46,33 +46,33 @@ export type BundleCreateInput = Prisma.BundleCreateInput;
 export type BundleUpdateInput = Prisma.BundleUpdateInput;
 
 // BundleProduct model types
-export type BundleProductModel = Prisma.BundleProductGetPayload<{}>;
+export type BundleProductModel = Prisma.BundleProductGetPayload<Record<string, never>>;
 export type BundleProductCreateInput = Prisma.BundleProductCreateInput;
 
 // Experiment model types (A/B Testing)
-export type ExperimentModel = Prisma.ExperimentGetPayload<{}>;
+export type ExperimentModel = Prisma.ExperimentGetPayload<Record<string, never>>;
 export type ExperimentWithVariants = Prisma.ExperimentGetPayload<{
   include: { variants: true };
 }>;
-export type VariantModel = Prisma.VariantGetPayload<{}>;
-export type EventModel = Prisma.EventGetPayload<{}>;
+export type VariantModel = Prisma.VariantGetPayload<Record<string, never>>;
+export type EventModel = Prisma.EventGetPayload<Record<string, never>>;
 
 // Analytics model types
-export type AnalyticsEventModel = Prisma.AnalyticsEventGetPayload<{}>;
-export type TrackingEventModel = Prisma.TrackingEventGetPayload<{}>;
+export type AnalyticsEventModel = Prisma.AnalyticsEventGetPayload<Record<string, never>>;
+export type TrackingEventModel = Prisma.TrackingEventGetPayload<Record<string, never>>;
 
 // ML model types
-export type MLUserProfileModel = Prisma.MLUserProfileGetPayload<{}>;
-export type MLProductSimilarityModel = Prisma.MLProductSimilarityGetPayload<{}>;
-export type MLProductPerformanceModel = Prisma.MLProductPerformanceGetPayload<{}>;
-export type RecommendationAttributionModel = Prisma.RecommendationAttributionGetPayload<{}>;
+export type MLUserProfileModel = Prisma.MLUserProfileGetPayload<Record<string, never>>;
+export type MLProductSimilarityModel = Prisma.MLProductSimilarityGetPayload<Record<string, never>>;
+export type MLProductPerformanceModel = Prisma.MLProductPerformanceGetPayload<Record<string, never>>;
+export type RecommendationAttributionModel = Prisma.RecommendationAttributionGetPayload<Record<string, never>>;
 
 // Subscription model types
-export type SubscriptionModel = Prisma.SubscriptionGetPayload<{}>;
-export type BilledOrderModel = Prisma.BilledOrderGetPayload<{}>;
+export type SubscriptionModel = Prisma.SubscriptionGetPayload<Record<string, never>>;
+export type BilledOrderModel = Prisma.BilledOrderGetPayload<Record<string, never>>;
 
 // Session model types
-export type SessionModel = Prisma.SessionGetPayload<{}>;
+export type SessionModel = Prisma.SessionGetPayload<Record<string, never>>;
 
 // Common Prisma operation types
 export type WhereUniqueInput<T> = T extends "settings"

@@ -98,7 +98,7 @@ export function getSeasonalContext(orders: OrderData[]): SeasonalContext {
 
   // Find all data for the same week number in previous years
   const sameWeekPreviousYears: number[] = [];
-  for (const [key, baseline] of baselines.entries()) {
+  for (const [, baseline] of baselines.entries()) {
     if (baseline.weekOfYear === currentWeek && baseline.year < currentYear) {
       sameWeekPreviousYears.push(baseline.orderCount);
     }

@@ -128,7 +128,7 @@ async function resolveVariantIdsBySku(
   const resolved = new Map<string, string>();
 
   for (const sku of skuList) {
-    const query = `sku:\"${sku.replace(/"/g, "")}\"`;
+    const query = `sku:"${sku.replace(/"/g, "")}"`;
     const response = await admin.graphql(
       `
       query ResolveVariantBySku($query: String!) {

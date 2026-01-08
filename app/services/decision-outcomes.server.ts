@@ -23,6 +23,11 @@ interface DecisionScope {
   dataJson: {
     variantId?: string;
     currentThreshold?: number;
+    revenue?: number;
+    refunds?: number;
+    shipping?: number;
+    netProfit?: number;
+    ordersCount?: number;
   };
 }
 

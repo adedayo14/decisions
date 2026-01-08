@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useFetcher, useLocation, Link } from "@remix-run/react";
+import { useLoaderData, useFetcher, useLocation } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -151,7 +151,7 @@ async function resolveVariantIdsBySku(
   const ambiguous: string[] = [];
 
   for (const sku of skuList) {
-    const query = `sku:\"${sku.replace(/"/g, "")}\"`;
+    const query = `sku:"${sku.replace(/"/g, "")}"`;
     const response = await admin.graphql(
       `
       query ResolveVariantBySku($query: String!) {

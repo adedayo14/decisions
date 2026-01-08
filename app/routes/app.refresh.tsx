@@ -21,31 +21,6 @@ async function getAccessScopes(admin: Awaited<ReturnType<typeof authenticate.adm
   return scopes.map((scope: { handle: string }) => scope.handle);
 }
 
-function formatUnknownError(error: unknown) {
-  if (error instanceof Error) {
-    if (error.cause) {
-      return `${error.message} (${String(error.cause)})`;
-    }
-    return error.message;
-  }
-  if (typeof error === "string") return error;
-  if (error && typeof error === "object") {
-    if ("message" in error && typeof error.message === "string") {
-      return error.message;
-    }
-    if ("errors" in error && Array.isArray((error as any).errors)) {
-      const first = (error as any).errors[0];
-      if (first?.message) return first.message;
-    }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
-    }
-  }
-  return "Unexpected error during refresh. Please retry.";
-}
-
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     const { admin, session } = await authenticate.admin(request);

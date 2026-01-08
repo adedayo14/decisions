@@ -1,11 +1,7 @@
 import type { OrderData } from "./shopify-data.server";
-import type { VariantProfitMetrics } from "./profit-calculator.server";
 import {
   calculateVariantProfits,
   getTopSellingVariants,
-  getLosingVariants,
-  getHighRefundVariants,
-  getHighDiscountVariants,
 } from "./profit-calculator.server";
 import { prisma } from "../db.server";
 import { getShopSettings } from "./shop-settings.server";

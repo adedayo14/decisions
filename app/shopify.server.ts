@@ -1,10 +1,5 @@
 import "@shopify/shopify-app-remix/adapters/node";
-import {
-  ApiVersion,
-  AppDistribution,
-  shopifyApp,
-  DeliveryMethod,
-} from "@shopify/shopify-app-remix/server";
+import { ApiVersion, AppDistribution, shopifyApp } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 import { logger } from "~/utils/logger.server";

@@ -5,7 +5,7 @@ import { prisma } from "../db.server";
  * Setup route to verify database connectivity
  * Access this route after deployment to ensure Prisma is working
  */
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({ request: _request }: LoaderFunctionArgs) {
   try {
     // Test database connection
     await prisma.$connect();

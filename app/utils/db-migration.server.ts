@@ -36,7 +36,7 @@ export async function hasOnboardingFields(): Promise<boolean> {
     // Cache the positive result
     featureCache.set(cacheKey, { value: true, timestamp: Date.now() });
     return true;
-  } catch (error) {
+  } catch (_error) {
     // Field doesn't exist - cache the negative result
     featureCache.set(cacheKey, { value: false, timestamp: Date.now() });
     return false;

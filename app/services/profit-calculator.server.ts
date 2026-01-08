@@ -1,4 +1,4 @@
-import type { OrderData, OrderLineItem } from "./shopify-data.server";
+import type { OrderData } from "./shopify-data.server";
 import { getVariantCOGS } from "./cogs.server";
 import { prisma } from "../db.server";
 
@@ -117,9 +117,6 @@ export async function calculateVariantProfits(
 
   // Process each order
   for (const order of orders) {
-    const orderRevenue = parseFloat(order.totalPrice);
-    const orderDiscounts = parseFloat(order.totalDiscounts);
-
     // Calculate refunds by line item
     const refundsByLineItem = new Map<string, { revenue: number; units: number }>();
     for (const refund of order.refunds) {

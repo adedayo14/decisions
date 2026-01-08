@@ -42,15 +42,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Load decisions with fallback - don't crash if DB has issues
   let decisions: any[] = [];
-  let orderCount = 0;
   let lastAnalyzedAt: string | null = null;
   let currencySymbol = "£"; // Default fallback
-  let cogsCount = 0;
   let minImpactThreshold = 50;
   let decisionOutcomes: any[] = [];
   let doneDecisionsCount = 0;
   let improvedDecisionsCount = 0;
-  let evaluatedOutcomesCount = 0;
   let missingCogsCount = 0;
 
   try {
@@ -102,12 +99,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     });
 
-    orderCount = shopData?.lastOrderCount ?? 0;
     lastAnalyzedAt = shopData?.lastAnalyzedAt?.toISOString() ?? null;
     currencySymbol = shopData?.currencySymbol ?? "£";
     minImpactThreshold = shopData?.minImpactThreshold ?? 50;
-
-    cogsCount = await prisma.cOGS.count({ where: { shop } });
 
     if (decisions.length > 0) {
       decisionOutcomes = await prisma.decisionOutcome.findMany({
@@ -146,12 +140,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           outcomeStatus: "improved",
         },
       });
-      evaluatedOutcomesCount = await prisma.decisionOutcome.count({
-        where: {
-          decisionId: { in: decisionIdList },
-          evaluatedAt: { not: null },
-        },
-      });
     }
   } catch (error) {
     console.error("[app._index loader] Error loading decisions (non-fatal):", error);
@@ -166,9 +154,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return json({
     shop,
-    orderCount,
     lastAnalyzedAt,
-    cogsCount,
     minOrdersRequired: MIN_ORDERS_FOR_DECISIONS,
     minImpactThreshold,
     currencySymbol,
@@ -256,14 +242,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function Index() {
   const {
     decisions,
-    orderCount,
     lastAnalyzedAt,
-    cogsCount,
     minImpactThreshold,
     currencySymbol,
     doneDecisionsCount,
     improvedDecisionsCount,
-    evaluatedOutcomesCount,
     missingCogsCount,
     filters,
   } =
@@ -284,7 +267,6 @@ export default function Index() {
   const settingsUrl = `/app/settings${search}`;
   const historyUrl = `/app/history${search}`;
   const shouldAutoRefresh = decisions.length === 0 && !lastAnalyzedAt;
-  const showCogsWarning = !isRefreshing && cogsCount === 0 && decisions.length > 0;
 
   const toggleNumbers = (decisionId: string) => {
     setExpandedDecisions((prev) => {
@@ -357,18 +339,6 @@ export default function Index() {
     return "Monitoring";
   };
 
-  const getCadenceLine = () => {
-    if (!lastAnalyzedAt) {
-      return "Next automatic refresh in 1 day.";
-    }
-    const analyzedAt = new Date(lastAnalyzedAt);
-    const daysSince = Math.max(
-      0,
-      Math.round((Date.now() - analyzedAt.getTime()) / (1000 * 60 * 60 * 24))
-    );
-    return `Last analysed ${daysSince} day${daysSince === 1 ? "" : "s"} ago.`;
-  };
-
   const getFreshnessValue = () => {
     if (!lastAnalyzedAt) {
       return "Next automatic refresh in 1 day.";
@@ -397,13 +367,13 @@ export default function Index() {
   const getImpactLabel = (confidence: string) => {
     switch (confidence) {
       case "high":
-        return "High confidence";
+        return "High impact";
       case "medium":
-        return "Medium confidence";
+        return "Medium impact";
       case "low":
-        return "Low confidence";
+        return "Low impact";
       default:
-        return "Confidence";
+        return "Impact";
     }
   };
 
@@ -585,7 +555,7 @@ export default function Index() {
                           Monitor
                         </Text>
                         <span className={`pill ${hasAlerts ? "alert" : ""}`}>
-                          {alertsCount} alert{alertsCount === 1 ? "" : "s"}
+                          Alerts: {alertsCount}
                         </span>
                       </div>
                       <div className="monitorAlertBox">

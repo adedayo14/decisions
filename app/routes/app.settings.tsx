@@ -162,7 +162,7 @@ export default function Settings() {
   return (
     <Page
       title="Settings"
-      subtitle="Configure costs and filters."
+      subtitle="Assumptions and cost coverage."
       backAction={{ url: `/app${search}` }}
       fullWidth
     >
@@ -192,7 +192,7 @@ export default function Settings() {
                   value={shippingCost}
                   onChange={setShippingCost}
                   prefix={currencySymbol}
-                  helpText="Average cost to ship one order."
+                  helpText="Used when estimating shipping losses."
                   autoComplete="off"
                 />
 
@@ -225,10 +225,13 @@ export default function Settings() {
                   </Text>
                 </div>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  {cogsSummary.total} costs tracked · Shopify {cogsSummary.bySource.shopify} · CSV {cogsSummary.bySource.csv} · Manual {cogsSummary.bySource.manual}
+                  COGS tracked: {cogsSummary.total} · Shopify {cogsSummary.bySource.shopify} · CSV {cogsSummary.bySource.csv} · Manual {cogsSummary.bySource.manual}
                 </Text>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Set "Cost per item" in Shopify Products. Products without costs are excluded from profit calculations.
+                  Products without costs are excluded from profit decisions.
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  Set Cost per item in Shopify Products to improve coverage.
                 </Text>
                 <Button
                   url="/app/costs"
@@ -247,7 +250,7 @@ export default function Settings() {
                   </Text>
                 </div>
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  Upload Shopify product export to bulk import costs.
+                  Import costs from a Shopify product export.
                 </Text>
 
                 <Button variant="secondary" onClick={handleCogsDownload}>
